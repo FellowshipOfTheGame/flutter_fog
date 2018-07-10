@@ -10,7 +10,7 @@ To get started with this project you will need [flutter](https://flutter.io/) an
 
 ### Initial Configuration
 
-To run this project you will need to sign the app to do this follow this [guide](https://flutter.io/android-release/).
+To run this project you will need to sign the app to do this follow this [guide](https://flutter.io/android-release/), to install Firebase use this [one](https://codelabs.developers.google.com/codelabs/flutter-firebase/#0).
 
 ## Developing
 
