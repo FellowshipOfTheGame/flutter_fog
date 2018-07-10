@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "257105541177",
+    "firebase_url": "https://fogmembers-1a770.firebaseio.com",
+    "project_id": "fogmembers-1a770",
+    "storage_bucket": "fogmembers-1a770.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:257105541177:android:2bbf9b78e57d0cf5",
+        "android_client_info": {
+          "package_name": "icmc.fog.flutterfog"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "257105541177-tctuij7cqaqfvirndn3sf7o0mkuab6d7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9zPwfpRlizbx376Dx4e9tE17D-AVOg2k"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
