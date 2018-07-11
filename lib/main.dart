@@ -152,12 +152,12 @@ class _MyHomePageState extends State<MyHomePage> {
                           ),
                         ),
                         RaisedButton(
-                          onPressed: () {
-                            setState(() async {
-                              FirebaseUser _user2 = await Navigator
-                                  .of(context)
-                                  .push(MaterialPageRoute<FirebaseUser>(
-                                      builder: (context) => SignUpWidget()));
+                          onPressed: () async {
+                            FirebaseUser _user2 = await Navigator
+                                .of(context)
+                                .push(MaterialPageRoute<FirebaseUser>(
+                                    builder: (context) => SignUpWidget()));
+                            setState(() {
                               _user = Future.value(_user2);
                             });
                           },
