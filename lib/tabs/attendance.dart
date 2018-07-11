@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_fog/tabs/qrgenerator.dart';
 
+final _db = Firestore.instance;
+
 String weekdayByNumber(int day) {
   if (day == DateTime.monday) {
     return "seg";
@@ -48,7 +50,7 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
       Expanded(
         flex: 5,
         child: StreamBuilder(
-          stream: Firestore.instance
+          stream: _db
               .collection("presence")
               .where("event", isEqualTo: document.reference)
               .snapshots(),
@@ -83,7 +85,7 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
                     document.documentID,
                   ),
                   QRGenerator(
-                      document: document,
+                    document: document,
                   ),
                 ],
               ),
@@ -99,8 +101,7 @@ class AttendanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream:
-          Firestore.instance.collection("events").orderBy("date").snapshots(),
+      stream: _db.collection("events").orderBy("date").snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return Center(child: CircularProgressIndicator());
@@ -232,7 +233,7 @@ class _AddAttendance extends State<AddAttendance> {
   TimeOfDay _fromTime = const TimeOfDay(hour: 19, minute: 00);
   bool myvalue = false;
   final myController = TextEditingController();
-  CollectionReference get meetings => Firestore.instance.collection('meeting');
+  CollectionReference get meetings => _db.collection('meeting');
 
   Future<Null> _addMeeting(DateTime date, int member, bool went) async {
     final DocumentReference document = meetings.document();
@@ -252,7 +253,7 @@ class _AddAttendance extends State<AddAttendance> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: Firestore.instance.collection("meeting").snapshots(),
+      stream: _db.collection("meeting").snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return Center(child: CircularProgressIndicator());

@@ -5,14 +5,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_fog/signup.dart';
 import 'package:flutter_fog/tabs/attendance.dart';
 import 'package:flutter_fog/tabs/qrreader.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
 final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: <String>[
+    'profile',
     'email',
   ],
 );
+
+class GoogleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(top: 11.0, bottom: 11.0, left: 8.0),
+          child: Container(
+            child: Image.asset('assets/google.png'),
+            width: 18.0,
+            height: 18.0,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 24.0, right: 8.0),
+          child: Text(
+            "Sign in with Google",
+            style: TextStyle(fontFamily: 'Roboto-Medium', fontSize: 14.0),
+          ),
+        )
+      ],
+    );
+  }
+}
 
 void main() => runApp(MyApp());
 
@@ -25,6 +53,14 @@ class MyApp extends StatelessWidget {
         primaryColor: Color(0xFF1E2264),
         primaryColorDark: Color(0xFF000039),
         primaryColorLight: Color(0xFF4F4A92),
+        buttonTheme: ButtonThemeData(
+          shape: BeveledRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(8.0),
+            ),
+          ),
+        ),
+        buttonColor: Color(0xFFF1CD36),
         accentColor: Color(0xFFF1CD36),
         backgroundColor: Color(0xFFB8B8B8),
       ),
@@ -134,22 +170,19 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
+                    padding: const EdgeInsets.only(bottom: 16.0),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: RaisedButton(
-                            onPressed: () {
-                              setState(() {
-                                _user = _auth.signInWithEmailAndPassword(
-                                    email: _emailController.text,
-                                    password: _passController.text);
-                              });
-                            },
-                            child: Text('Login'),
-                          ),
+                        RaisedButton(
+                          onPressed: () {
+                            setState(() {
+                              _user = _auth.signInWithEmailAndPassword(
+                                  email: _emailController.text,
+                                  password: _passController.text);
+                            });
+                          },
+                          child: Text('Login'),
                         ),
                         RaisedButton(
                           onPressed: () async {
@@ -166,8 +199,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       ],
                     ),
                   ),
-                  MaterialButton(
-                    child: Text("Login with Google"),
+                  RaisedButton(
+                    color: Colors.white,
+                    shape: Border(),
+                    elevation: 1.0,
+                    child: GoogleButton(),
                     onPressed: () => setState(
                           () {
                             _user = _handleSignIn().catchError((e) => print(e));
@@ -187,8 +223,11 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               title: Text(widget.title),
             ),
-            body: TabBarView(
-              children: _tabsContent,
+            body: Padding(
+              padding: const EdgeInsets.only(right: 8.0, left: 8.0),
+              child: TabBarView(
+                children: _tabsContent,
+              ),
             ),
           ),
         );
