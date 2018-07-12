@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_fog/signup.dart';
 import 'package:flutter_fog/tabs/attendance.dart';
-import 'package:flutter_fog/tabs/qrreader.dart';
 //import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -87,9 +86,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Tab(
       text: "Attendance",
     ),
-    Tab(
-      text: 'QR Reader',
-    ),
+
   ];
 
   static List<Tab> _adminTabs = <Tab>[
@@ -102,7 +99,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static List<Widget> _userTabsContent = <Widget>[
       AttendanceWidget(),
-      QRReader(),
   ];
 
 

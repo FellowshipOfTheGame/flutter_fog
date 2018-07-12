@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_fog/tabs/qrgenerator.dart';
+import 'package:qr_reader/qr_reader.dart';
 
 final _db = Firestore.instance;
 
@@ -65,29 +65,38 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
                     ListTile(
                       title: Center(child: Text(document['name'])),
                     ),
-                    QRGenerator(
-                      document: document,
-                    ),
                   ],
                 ),
               );
-            return Card(
-              color: snapshot.data.documents[0]['went']
-                  ? Colors.green
-                  : Colors.red,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  ListTile(
-                    title: Center(child: Text(document['name'])),
-                  ),
-                  Text(
-                    document.documentID,
-                  ),
-                  QRGenerator(
-                    document: document,
-                  ),
-                ],
+            return FlatButton(
+              padding: EdgeInsets.zero,
+              onPressed: () async {
+                String barcode = await QRCodeReader()
+                    .setAutoFocusIntervalInMs(200)
+                    .setForceAutoFocus(true)
+                    .setTorchEnabled(true)
+                    .setHandlePermissions(true)
+                    .setExecuteAfterPermissionGranted(true)
+                    .scan();
+                if (barcode == document.documentID && !document.data['went']) {
+                  Firestore.instance.runTransaction((transaction) async {
+                    DocumentSnapshot meeting =
+                        await transaction.get(document.reference);
+                    await transaction.update(meeting.reference, {'went': true});
+                  });
+                }
+              },
+              child: Card(
+                color:
+                    document.data['went'] == true ? Colors.green : Colors.red,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    ListTile(
+                      title: Center(child: Text(document['name'])),
+                    ),
+                  ],
+                ),
               ),
             );
           },
