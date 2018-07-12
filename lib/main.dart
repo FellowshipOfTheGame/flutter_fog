@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_fog/signup.dart';
 import 'package:flutter_fog/tabs/attendance.dart';
 import 'package:flutter_fog/tabs/qrreader.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
