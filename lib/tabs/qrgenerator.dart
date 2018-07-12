@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 class QRGenerator extends StatelessWidget {
   QRGenerator({
     @required this.document,
@@ -13,16 +12,16 @@ class QRGenerator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        child: _buildQRCode(context, document),
+      child: _buildQRCode(context, document),
     );
   }
 }
 
 Widget _buildQRCode(BuildContext context, DocumentSnapshot document) {
   return Container(
-      color: Colors.white,
-      child: Center(
-        child: StreamBuilder(
+    color: Colors.white,
+    child: Center(
+      child: StreamBuilder(
           stream: Firestore.instance
               .collection("presence")
               .where("event", isEqualTo: document.reference)
@@ -35,8 +34,7 @@ Widget _buildQRCode(BuildContext context, DocumentSnapshot document) {
               data: document.documentID,
               size: 250.0,
             );
-          }
-        ),
-      ),
+          }),
+    ),
   );
 }
