@@ -19,7 +19,6 @@ class QRGenerator extends StatelessWidget {
 }
 
 Widget _buildQRCode(BuildContext context, DocumentSnapshot document) {
-  print(document.documentID);
   return Container(
       color: Colors.white,
       child: Center(

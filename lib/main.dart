@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_fog/tabs/attendance.dart';
 import 'package:flutter_fog/tabs/login.dart';
@@ -47,12 +49,21 @@ class _MyHomePageState extends State<MyHomePage> {
     ),
   ];
 
-  final List<Widget> myTabsContent = <Widget>[
-    AttendanceWidget(),
-    AddAttendance(),
-    QRReader(),
-    LoginWidget(),
-  ];
+  static Future<List<Widget>> userTabsContent = Future(
+    () => <Widget>[
+      AttendanceWidget(),
+      QRReader(),
+      LoginWidget(),
+    ]
+  );
+
+  static Future<List<Widget>> adminTabsContent = Future(
+    () =>  <Widget>[
+      AddAttendance(),
+    ],
+  );
+
+  Future<List<Widget>> currentTabsContent = userTabsContent;
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +76,42 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           title: Text(widget.title),
         ),
-        body: TabBarView(
-          children: myTabsContent,
+        body: FutureBuilder<List>(
+          future: currentTabsContent,
+          builder: (BuildContext context, AsyncSnapshot<List> snapshot) {
+            return(snapshot.data == null ? snapshot.data : Future(()=>Widget));
+          },
+        ),
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              DrawerHeader(
+                child: Text("Menu"),
+                decoration: BoxDecoration(
+                  color: Color(0xFF1E2264),
+                ),
+              ),
+              ListTile(
+                title: Text("Área Principal"),
+                onTap: () {
+                  setState(() {
+                    currentTabsContent = userTabsContent;
+                  });
+                  Navigator.pop(context);  
+                },
+              ),
+              ListTile(
+                title: Text("Ademir"),
+                onTap: () {
+                  setState(() {
+                    currentTabsContent = adminTabsContent;
+                  });
+                  Navigator.pop(context);  
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
