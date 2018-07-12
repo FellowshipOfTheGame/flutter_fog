@@ -78,7 +78,10 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
                     .setHandlePermissions(true)
                     .setExecuteAfterPermissionGranted(true)
                     .scan();
-                if (barcode == document.documentID && !document.data['went']) {
+                print(barcode);
+                print(document.documentID);
+                print(document.data['went']);
+                if (barcode == document.documentID && (document.data['went'] == null || !document.data['went'])) {
                   Firestore.instance.runTransaction((transaction) async {
                     DocumentSnapshot meeting =
                         await transaction.get(document.reference);

@@ -91,7 +91,6 @@ class _MyHomePageState extends State<MyHomePage> {
     Tab(
       text: "Attendance",
     ),
-
   ];
 
   static List<Tab> _adminTabs = <Tab>[
@@ -103,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Tab> _currentTabs = _userTabs;
 
   static List<Widget> _userTabsContent = <Widget>[
-      AttendanceWidget(),
+    AttendanceWidget(),
   ];
 
   static List<Widget> _adminTabsContent = <Widget>[
