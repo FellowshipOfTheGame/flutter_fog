@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_fog/signup.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_fog/tabs/qrreader.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
+final Firestore _db = Firestore.instance;
 final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: <String>[
     'profile',
@@ -78,9 +80,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   Future<FirebaseUser> _user = _auth.currentUser();
+  Future<bool> _loading = Future.value(false);
+  CollectionReference get members => _db.collection('members');
 
   static List<Tab> _userTabs = <Tab>[
     Tab(
@@ -137,6 +142,22 @@ class _MyHomePageState extends State<MyHomePage> {
     _auth.signOut();
   }
 
+  Widget loading(bool value) {
+    if (value) {
+      return Center(child: CircularProgressIndicator());
+    } else {
+      return Container();
+    }
+  }
+
+  Future<Null> _addMember(FirebaseUser user) async {
+    final DocumentReference document = members.document(user.uid);
+    document.setData(<String, dynamic>{
+      'name': user.displayName,
+      'authority': 0,
+    });
+  }
+
   void initState() {
     _user = _handleSignOut();
     super.initState();
@@ -145,102 +166,178 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-        future: _user,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData)
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(widget.title),
-              ),
-              body: Padding(
-                padding: const EdgeInsets.only(
-                    left: 16.0, bottom: 16.0, right: 16.0, top: 32.0),
-                child: Column(
+      future: _user,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData)
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(widget.title),
+            ),
+            body: FutureBuilder(
+              future: _loading,
+              builder: (lcontext, lsnapshot) {
+                if (!lsnapshot.hasData) return Container();
+                return Stack(
                   children: <Widget>[
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: TextField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: 'E-mail',
-                          border: OutlineInputBorder(),
+                      padding: const EdgeInsets.only(
+                          left: 16.0, bottom: 16.0, right: 16.0, top: 32.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: TextFormField(
+                                controller: _emailController,
+                                decoration: InputDecoration(
+                                  labelText: 'Email',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  if (value.isEmpty) return 'Email is empty';
+                                  if (value.contains(' ') ||
+                                      !value.contains(
+                                          RegExp(r'^[^@]+@[^.]+\..+$')))
+                                    return 'Invalid email';
+                                },
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: TextFormField(
+                                controller: _passController,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  border: OutlineInputBorder(),
+                                ),
+                                obscureText: true,
+                                validator: (value) {
+                                  if (value.isEmpty) return 'Password is empty';
+                                },
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: <Widget>[
+                                  RaisedButton(
+                                    onPressed: () async {
+                                      if (_formKey.currentState.validate() &&
+                                          !lsnapshot.data) {
+                                        setState(() {
+                                          _loading = Future.value(true);
+                                        });
+
+                                        try {
+                                          FirebaseUser user = await _auth
+                                              .signInWithEmailAndPassword(
+                                                  email: _emailController.text,
+                                                  password:
+                                                      _passController.text);
+
+                                          setState(() {
+                                            _user = Future.value(user);
+                                          });
+                                        } catch (e) {
+                                          print(e.message);
+                                          if (e.message ==
+                                              'There is no user record corresponding to this identifier. The user may have been deleted.') {
+                                            Scaffold
+                                                .of(lcontext)
+                                                .showSnackBar(SnackBar(
+                                                  content: Text(
+                                                      'Invalid email/password'),
+                                                ));
+                                          }
+
+                                          setState(() {
+                                            _loading = Future.value(false);
+                                          });
+                                        }
+                                      }
+                                    },
+                                    child: Text('Login'),
+                                  ),
+                                  RaisedButton(
+                                    onPressed: () async {
+                                      if (!lsnapshot.data) {
+                                        FirebaseUser _user2 = await Navigator
+                                            .of(context)
+                                            .push(
+                                                MaterialPageRoute<FirebaseUser>(
+                                                    builder: (context) =>
+                                                        SignUpWidget()));
+                                        setState(() {
+                                          _user = Future.value(_user2);
+                                        });
+                                      }
+                                    },
+                                    child: Text('Signup'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            RaisedButton(
+                              color: Colors.white,
+                              shape: Border(),
+                              elevation: 1.0,
+                              child: GoogleButton(),
+                              onPressed: () async {
+                                if (!lsnapshot.data) {
+                                  setState(() {
+                                    _loading = Future.value(true);
+                                  });
+
+                                  try {
+                                    FirebaseUser user = await _handleSignIn();
+                                    _addMember(user);
+                                    setState(
+                                      () {
+                                        _user = Future.value(user);
+                                      },
+                                    );
+                                  } catch (e) {
+                                    print(e);
+                                  }
+
+                                  setState(() {
+                                    _loading = Future.value(false);
+                                  });
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: TextField(
-                        controller: _passController,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                        ),
-                        obscureText: true,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: <Widget>[
-                          RaisedButton(
-                            onPressed: () {
-                              setState(() {
-                                _user = _auth.signInWithEmailAndPassword(
-                                    email: _emailController.text,
-                                    password: _passController.text);
-                              });
-                            },
-                            child: Text('Login'),
-                          ),
-                          RaisedButton(
-                            onPressed: () async {
-                              FirebaseUser _user2 = await Navigator
-                                  .of(context)
-                                  .push(MaterialPageRoute<FirebaseUser>(
-                                      builder: (context) => SignUpWidget()));
-                              setState(() {
-                                _user = Future.value(_user2);
-                              });
-                            },
-                            child: Text('Signup'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    RaisedButton(
-                      color: Colors.white,
-                      shape: Border(),
-                      elevation: 1.0,
-                      child: GoogleButton(),
-                      onPressed: () => setState(
-                            () {
-                              _user =
-                                  _handleSignIn().catchError((e) => print(e));
-                            },
-                          ),
-                    ),
+                    loading(lsnapshot.data),
                   ],
-                ),
+                );
+              },
+            ),
+          );
+        return DefaultTabController(
+          length: _currentTabs.length,
+          child: Scaffold(
+            appBar: AppBar(
+              bottom: TabBar(
+                tabs: _currentTabs,
               ),
-            );
-          return DefaultTabController(
-            length: _currentTabs.length,
-            child: Scaffold(
-              appBar: AppBar(
-                bottom: TabBar(
-                  tabs: _currentTabs,
-                ),
-                title: Text(widget.title),
+              title: Text(widget.title),
+            ),
+            body: Padding(
+              padding: const EdgeInsets.only(right: 8.0, left: 8.0),
+              child: TabBarView(
+                children: _currentTabsContent,
               ),
-              body: Padding(
-                padding: const EdgeInsets.only(right: 8.0, left: 8.0),
-                child: TabBarView(
-                  children: _currentTabsContent,
-                ),
-              ),
-              drawer: Drawer(
-                child: ListView(padding: EdgeInsets.zero, children: <Widget>[
+            ),
+            drawer: Drawer(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: <Widget>[
                   DrawerHeader(
                     child: Text("Menu"),
                     decoration: BoxDecoration(
@@ -267,10 +364,12 @@ class _MyHomePageState extends State<MyHomePage> {
                       Navigator.pop(context);
                     },
                   ),
-                ]),
+                ],
               ),
             ),
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 }
