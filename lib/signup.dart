@@ -17,6 +17,7 @@ class _SignUpWidget extends State<SignUpWidget> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
+  final _cpassController = TextEditingController();
   Future<bool> _sigin = Future.value(false);
   CollectionReference get members => _db.collection('members');
 
@@ -37,6 +38,15 @@ class _SignUpWidget extends State<SignUpWidget> {
   }
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passController.dispose();
+    _cpassController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -48,110 +58,114 @@ class _SignUpWidget extends State<SignUpWidget> {
           if (!snapshot.hasData) return Container();
           return Stack(
             children: <Widget>[
-              Padding(
+              ListView(
                 padding: const EdgeInsets.only(
                     left: 16.0, bottom: 16.0, right: 16.0, top: 32.0),
-                child: Column(
-                  children: <Widget>[
-                    Form(
-                      key: _formKey,
-                      child: Column(children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: TextFormField(
-                            controller: _nameController,
-                            decoration: InputDecoration(
-                              labelText: 'Name',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value.isEmpty) return 'Name is empty';
-                            },
-                          ),
+                children: <Widget>[
+                  Form(
+                    key: _formKey,
+                    child: Column(children: <Widget>[
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Name',
+                          border: OutlineInputBorder(),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: TextFormField(
-                            controller: _emailController,
-                            decoration: InputDecoration(
-                              labelText: 'Email',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value.isEmpty) return 'Email is empty';
-                              if (value.contains(' ') ||
-                                  !value.contains(RegExp(r'^[^@]+@[^.]+\..+$')))
-                                return 'Invalid email';
-                            },
-                          ),
+                        validator: (value) {
+                          if (value.isEmpty) return 'Name is empty';
+                        },
+                      ),
+                      const SizedBox(height: 12.0),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: TextFormField(
-                            controller: _passController,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value.isEmpty) return 'Password is empty';
-                              if (value.length < 8)
-                                return 'Password needs to be at least 8 caracters long';
-                              if (!value.contains(RegExp(r'[a-zA-Z]')) ||
-                                  !value.contains(RegExp(r'[0-9]')))
-                                return 'Password needs to contain numbers and letters';
-                            },
-                            obscureText: true,
-                          ),
+                        validator: (value) {
+                          if (value.isEmpty) return 'Email is empty';
+                          if (value.contains(' ') ||
+                              !value.contains(RegExp(r'^[^@]+@[^.]+\..+$')))
+                            return 'Invalid email';
+                        },
+                      ),
+                      const SizedBox(height: 12.0),
+                      TextFormField(
+                        controller: _passController,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
                         ),
-                      ]),
-                    ),
-                    RaisedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState.validate() &&
-                            !snapshot.data) {
-                          setState(() {
-                            _sigin = Future.value(true);
-                          });
+                        validator: (value) {
+                          if (value.isEmpty) return 'Password is empty';
+                          if (value.length < 8)
+                            return 'Password needs to be at least 8 caracters long';
+                          if (!value.contains(RegExp(r'[a-zA-Z]')) ||
+                              !value.contains(RegExp(r'[0-9]')))
+                            return 'Password needs to contain numbers and letters';
+                        },
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 12.0),
+                      TextFormField(
+                        controller: _cpassController,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value != _passController.text)
+                            return 'Passwords do not match';
+                        },
+                        obscureText: true,
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 16.0),
+                  RaisedButton(
+                    child: Text('Confirm'),
+                    onPressed: () async {
+                      if (_formKey.currentState.validate() && !snapshot.data) {
+                        setState(() {
+                          _sigin = Future.value(true);
+                        });
 
-                          try {
-                            await _auth.createUserWithEmailAndPassword(
-                                email: _emailController.text,
-                                password: _passController.text);
-                            UserUpdateInfo _user = UserUpdateInfo();
-                            _user.displayName = _nameController.text;
-                            await _auth.updateProfile(_user);
+                        try {
+                          await _auth.createUserWithEmailAndPassword(
+                              email: _emailController.text,
+                              password: _passController.text);
+                          UserUpdateInfo _user = UserUpdateInfo();
+                          _user.displayName = _nameController.text;
+                          await _auth.updateProfile(_user);
 
-                            FirebaseUser user = await _auth.currentUser();
-                            _addMember(user);
-                            Navigator.of(context).pop(user);
-                          } catch (e) {
-                            if (e.message ==
-                                'The email address is already in use by another account.') {
-                              Scaffold.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Email already in use'),
-                                    ),
-                                  );
-                            } else {
-                              print(e.message);
-                              Scaffold.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('Unknown error please report'),
-                                    ),
-                                  );
-                            }
-                            setState(() {
-                              _sigin = Future.value(false);
-                            });
+                          FirebaseUser user = await _auth.currentUser();
+                          _addMember(user);
+                          Navigator.of(context).pop(user);
+                        } catch (e) {
+                          if (e.message ==
+                              'The email address is already in use by another account.') {
+                            Scaffold.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Email already in use'),
+                                  ),
+                                );
+                          } else {
+                            print(e.message);
+                            Scaffold.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Unknown error please report'),
+                                  ),
+                                );
                           }
+                          setState(() {
+                            _sigin = Future.value(false);
+                          });
                         }
-                      },
-                      child: Text('Confirm'),
-                    ),
-                  ],
-                ),
+                      }
+                    },
+                  ),
+                ],
               ),
               loading(snapshot.data),
             ],

@@ -81,7 +81,8 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
                 print(barcode);
                 print(document.documentID);
                 print(document.data['went']);
-                if (barcode == document.documentID && (document.data['went'] == null || !document.data['went'])) {
+                if (barcode == document.documentID &&
+                    (document.data['went'] == null || !document.data['went'])) {
                   Firestore.instance.runTransaction((transaction) async {
                     DocumentSnapshot meeting =
                         await transaction.get(document.reference);
@@ -150,6 +151,7 @@ class _InputDropdown extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: labelText,
+          border: OutlineInputBorder(),
         ),
         baseStyle: valueStyle,
         child: Row(
@@ -171,14 +173,16 @@ class _InputDropdown extends StatelessWidget {
 class _DateTimePicker extends StatelessWidget {
   const _DateTimePicker(
       {Key key,
-      this.labelText,
+      this.labelTextDate,
+      this.labelTextTime,
       this.selectedDate,
       this.selectedTime,
       this.selectDate,
       this.selectTime})
       : super(key: key);
 
-  final String labelText;
+  final String labelTextDate;
+  final String labelTextTime;
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
   final ValueChanged<DateTime> selectDate;
@@ -208,7 +212,7 @@ class _DateTimePicker extends StatelessWidget {
         Expanded(
           flex: 4,
           child: _InputDropdown(
-            labelText: labelText,
+            labelText: labelTextDate,
             valueText:
                 "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
             valueStyle: valueStyle,
@@ -221,6 +225,7 @@ class _DateTimePicker extends StatelessWidget {
         Expanded(
           flex: 3,
           child: _InputDropdown(
+            labelText: labelTextTime,
             valueText: selectedTime.format(context),
             valueStyle: valueStyle,
             onPressed: () {
@@ -233,89 +238,120 @@ class _DateTimePicker extends StatelessWidget {
   }
 }
 
-class AddAttendance extends StatefulWidget {
+class AddEvent extends StatefulWidget {
   static const String routeName = '/material/date-and-time-pickers';
 
   @override
-  _AddAttendance createState() => _AddAttendance();
+  _AddEvent createState() => _AddEvent();
 }
 
-class _AddAttendance extends State<AddAttendance> {
+class _AddEvent extends State<AddEvent> {
   DateTime _fromDate = DateTime.now();
   TimeOfDay _fromTime = const TimeOfDay(hour: 19, minute: 00);
   bool myvalue = false;
-  final myController = TextEditingController();
-  CollectionReference get meetings => _db.collection('meeting');
+  final _nameController = TextEditingController();
+  CollectionReference get events => _db.collection('events');
+  CollectionReference get members => _db.collection('members');
+  CollectionReference get presences => _db.collection('presences');
 
-  Future<Null> _addMeeting(DateTime date, int member, bool went) async {
-    final DocumentReference document = meetings.document();
+  Future<DocumentReference> _addEvent(
+      DateTime date, String name, bool haspresence) async {
+    final DocumentReference document = events.document();
     document.setData(<String, dynamic>{
       'date': date,
+      'name': name,
+      'haspresence': haspresence,
+    });
+
+    return document;
+  }
+
+  Future<Null> _addPresence(
+      DocumentReference event, DocumentReference member, bool went) async {
+    final DocumentReference document = presences.document();
+    document.setData(<String, dynamic>{
+      'event': event,
       'member': member,
       'went': went,
     });
   }
 
+  Future<Null> _addPresences(DocumentReference event) async {
+    try {
+      QuerySnapshot documents = await members.getDocuments();
+      for (DocumentSnapshot document in documents.documents) {
+        _addPresence(event, document.reference, false);
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
   @override
   void dispose() {
-    myController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: _db.collection("meeting").snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData)
-          return Center(child: CircularProgressIndicator());
-        return ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: <Widget>[
-            _DateTimePicker(
-              labelText: 'From',
-              selectedDate: _fromDate,
-              selectedTime: _fromTime,
-              selectDate: (DateTime date) {
-                setState(() {
-                  _fromDate = date;
-                });
-              },
-              selectTime: (TimeOfDay time) {
-                setState(() {
-                  _fromTime = time;
-                });
-              },
-            ),
-            TextField(
-              controller: myController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Member',
-              ),
-              style:
-                  Theme.of(context).textTheme.display1.copyWith(fontSize: 20.0),
-            ),
-            CheckboxListTile(
-              value: myvalue,
-              onChanged: (bool value) {
-                setState(() {
-                  myvalue = value;
-                });
-              },
-            ),
-            Center(
-              child: RaisedButton(
-                  child: Text("ADD"),
-                  onPressed: () {
-                    DateTime date = DateTime(_fromDate.year, _fromDate.month,
-                        _fromDate.day, _fromTime.hour, _fromTime.minute);
-                    _addMeeting(date, int.parse(myController.text), myvalue);
-                  }),
-            ),
-          ],
-        );
-      },
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: <Widget>[
+        _DateTimePicker(
+          labelTextDate: 'Date',
+          labelTextTime: 'Time',
+          selectedDate: _fromDate,
+          selectedTime: _fromTime,
+          selectDate: (DateTime date) {
+            setState(() {
+              _fromDate = date;
+            });
+          },
+          selectTime: (TimeOfDay time) {
+            setState(() {
+              _fromTime = time;
+            });
+          },
+        ),
+        const SizedBox(height: 12.0),
+        TextField(
+          controller: _nameController,
+          decoration: const InputDecoration(
+            labelText: 'Name',
+            border: OutlineInputBorder(),
+          ),
+          style: Theme.of(context).textTheme.display1.copyWith(fontSize: 20.0),
+        ),
+        const SizedBox(height: 12.0),
+        CheckboxListTile(
+          title: Text('Has presence'),
+          value: myvalue,
+          onChanged: (bool value) {
+            setState(() {
+              myvalue = value;
+            });
+          },
+        ),
+        const SizedBox(height: 12.0),
+        RaisedButton(
+          child: Text("Add event"),
+          onPressed: () async {
+            DateTime date = DateTime(_fromDate.year, _fromDate.month,
+                _fromDate.day, _fromTime.hour, _fromTime.minute);
+            DocumentReference _event =
+                await _addEvent(date, _nameController.text, myvalue);
+            _nameController.clear();
+
+            print(_event);
+            _addPresences(_event);
+
+            setState(() {
+              myvalue = false;
+            });
+          },
+        ),
+      ],
     );
   }
 }
