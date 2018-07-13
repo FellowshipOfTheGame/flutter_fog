@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_reader/qr_reader.dart';
 
-final _db = Firestore.instance;
+final FirebaseAuth _auth = FirebaseAuth.instance;
+final Firestore _db = Firestore.instance;
 
 String weekdayByNumber(int day) {
   if (day == DateTime.monday) {
@@ -26,6 +28,35 @@ String weekdayByNumber(int day) {
   }
 }
 
+String formatTime(DateTime from, DateTime to) {
+  String _fromh;
+  String _fromm;
+  String _toh;
+  String _tom;
+
+  if (from.minute < 10)
+    _fromm = "0${from.minute}";
+  else
+    _fromm = "${from.minute}";
+
+  if (to.minute < 10)
+    _tom = "0${to.minute}";
+  else
+    _tom = "${to.minute}";
+
+  if (from.hour < 10)
+    _fromh = "0${from.hour}";
+  else
+    _fromh = "${from.hour}";
+
+  if (to.hour < 10)
+    _toh = "0${to.hour}";
+  else
+    _toh = "${to.hour}";
+
+  return "$_fromh:$_fromm - $_toh:$_tom";
+}
+
 Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
   return Row(
     key: Key(document.documentID),
@@ -37,11 +68,11 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              "${document['date'].day}/${document['date'].month}",
+              "${document['from'].day}/${document['from'].month}",
               style: Theme.of(context).textTheme.subhead,
             ),
             Text(
-              weekdayByNumber(document['date'].weekday),
+              weekdayByNumber(document['from'].weekday),
               style: Theme.of(context).textTheme.body1,
             ),
           ],
@@ -49,62 +80,70 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
       ),
       Expanded(
         flex: 5,
-        child: StreamBuilder(
-          stream: _db
-              .collection("presence")
-              .where("event", isEqualTo: document.reference)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData)
-              return Container();
-            else if (snapshot.data.documents.length == 0)
-              return Card(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    ListTile(
-                      title: Center(child: Text(document['name'])),
+        child: FutureBuilder(
+            future: _auth.currentUser(),
+            builder: (ucontext, usnapshot) {
+              if (!usnapshot.hasData) {
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+              DocumentReference _ref =
+                  _db.collection("members").document(usnapshot.data.uid);
+              return StreamBuilder(
+                stream: _db
+                    .collection("presences")
+                    .where("event", isEqualTo: document.reference)
+                    .where("member", isEqualTo: _ref)
+                    .snapshots(),
+                builder: (pcontext, psnapshot) {
+                  if (!psnapshot.hasData) {
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  } else if (!document['haspresence'])
+                    return Card(
+                      child: ListTile(
+                        title: Text(document['name']),
+                        subtitle:
+                            Text(formatTime(document['from'], document['to'])),
+                      ),
+                    );
+                  return FlatButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () async {
+                      String barcode = await QRCodeReader()
+                          .setAutoFocusIntervalInMs(200)
+                          .setForceAutoFocus(true)
+                          .setTorchEnabled(true)
+                          .setHandlePermissions(true)
+                          .setExecuteAfterPermissionGranted(true)
+                          .scan();
+                      if (barcode == document.documentID &&
+                          (psnapshot.data.documents[0]['went'] == null ||
+                              !psnapshot.data.documents[0]['went'])) {
+                        Firestore.instance.runTransaction((transaction) async {
+                          DocumentSnapshot meeting =
+                              await transaction.get(psnapshot.data.reference);
+                          await transaction
+                              .update(meeting.reference, {'went': true});
+                        });
+                      }
+                    },
+                    child: Card(
+                      color: psnapshot.data.documents[0]['went']
+                          ? Colors.green
+                          : Colors.red,
+                      child: ListTile(
+                        title: Text(document['name']),
+                        subtitle:
+                            Text(formatTime(document['from'], document['to'])),
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               );
-            return FlatButton(
-              padding: EdgeInsets.zero,
-              onPressed: () async {
-                String barcode = await QRCodeReader()
-                    .setAutoFocusIntervalInMs(200)
-                    .setForceAutoFocus(true)
-                    .setTorchEnabled(true)
-                    .setHandlePermissions(true)
-                    .setExecuteAfterPermissionGranted(true)
-                    .scan();
-                print(barcode);
-                print(document.documentID);
-                print(document.data['went']);
-                if (barcode == document.documentID &&
-                    (document.data['went'] == null || !document.data['went'])) {
-                  Firestore.instance.runTransaction((transaction) async {
-                    DocumentSnapshot meeting =
-                        await transaction.get(document.reference);
-                    await transaction.update(meeting.reference, {'went': true});
-                  });
-                }
-              },
-              child: Card(
-                color:
-                    document.data['went'] == true ? Colors.green : Colors.red,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    ListTile(
-                      title: Center(child: Text(document['name'])),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+            }),
       )
     ],
   );
@@ -114,7 +153,7 @@ class AttendanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: _db.collection("events").orderBy("date").snapshots(),
+      stream: _db.collection("events").orderBy("from").snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return Center(child: CircularProgressIndicator());
@@ -247,7 +286,9 @@ class AddEvent extends StatefulWidget {
 
 class _AddEvent extends State<AddEvent> {
   DateTime _fromDate = DateTime.now();
+  DateTime _toDate = DateTime.now();
   TimeOfDay _fromTime = const TimeOfDay(hour: 19, minute: 00);
+  TimeOfDay _toTime = const TimeOfDay(hour: 19, minute: 00);
   bool myvalue = false;
   final _nameController = TextEditingController();
   CollectionReference get events => _db.collection('events');
@@ -255,10 +296,11 @@ class _AddEvent extends State<AddEvent> {
   CollectionReference get presences => _db.collection('presences');
 
   Future<DocumentReference> _addEvent(
-      DateTime date, String name, bool haspresence) async {
+      DateTime from, DateTime to, String name, bool haspresence) async {
     final DocumentReference document = events.document();
     document.setData(<String, dynamic>{
-      'date': date,
+      'from': from,
+      'to': to,
       'name': name,
       'haspresence': haspresence,
     });
@@ -299,8 +341,7 @@ class _AddEvent extends State<AddEvent> {
       padding: const EdgeInsets.all(16.0),
       children: <Widget>[
         _DateTimePicker(
-          labelTextDate: 'Date',
-          labelTextTime: 'Time',
+          labelTextDate: 'From',
           selectedDate: _fromDate,
           selectedTime: _fromTime,
           selectDate: (DateTime date) {
@@ -311,6 +352,22 @@ class _AddEvent extends State<AddEvent> {
           selectTime: (TimeOfDay time) {
             setState(() {
               _fromTime = time;
+            });
+          },
+        ),
+        const SizedBox(height: 12.0),
+        _DateTimePicker(
+          labelTextDate: 'To',
+          selectedDate: _toDate,
+          selectedTime: _toTime,
+          selectDate: (DateTime date) {
+            setState(() {
+              _toDate = date;
+            });
+          },
+          selectTime: (TimeOfDay time) {
+            setState(() {
+              _toTime = time;
             });
           },
         ),
@@ -337,15 +394,52 @@ class _AddEvent extends State<AddEvent> {
         RaisedButton(
           child: Text("Add event"),
           onPressed: () async {
-            DateTime date = DateTime(_fromDate.year, _fromDate.month,
+            DateTime from = DateTime(_fromDate.year, _fromDate.month,
                 _fromDate.day, _fromTime.hour, _fromTime.minute);
-            DocumentReference _event =
-                await _addEvent(date, _nameController.text, myvalue);
+            DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
+                _toTime.hour, _toTime.minute);
+
+            if (from.day == to.day &&
+                from.month == to.month &&
+                from.year == to.year) {
+              DocumentReference _event =
+                  await _addEvent(from, to, _nameController.text, myvalue);
+
+              if (myvalue) _addPresences(_event);
+            } else {
+              DocumentReference _event = await _addEvent(
+                  from,
+                  DateTime(_fromDate.year, _fromDate.month, _fromDate.day, 23,
+                      59, 59),
+                  _nameController.text,
+                  myvalue);
+
+              if (myvalue) _addPresences(_event);
+
+              for (var i = from.year; i <= to.year; i++) {
+                for (var j = from.month; j <= to.month; j++) {
+                  for (var k = from.day + 1; k < to.day; k++) {
+                    _event = await _addEvent(
+                        DateTime(i, j, k, 0, 0),
+                        DateTime(i, j, k, 23, 59, 59),
+                        _nameController.text,
+                        myvalue);
+
+                    if (myvalue) _addPresences(_event);
+                  }
+                }
+              }
+
+              _event = await _addEvent(
+                  DateTime(_toDate.year, _toDate.month, _toDate.day, 0, 0),
+                  to,
+                  _nameController.text,
+                  myvalue);
+
+              if (myvalue) _addPresences(_event);
+            }
+
             _nameController.clear();
-
-            print(_event);
-            _addPresences(_event);
-
             setState(() {
               myvalue = false;
             });
