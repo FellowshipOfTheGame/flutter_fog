@@ -36,7 +36,7 @@ class GoogleButton extends StatelessWidget {
             "Sign in with Google",
             style: TextStyle(fontFamily: 'Roboto-Medium', fontSize: 14.0),
           ),
-        )
+        ),
       ],
     );
   }
@@ -94,7 +94,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static List<Tab> _adminTabs = <Tab>[
     Tab(
-      text: "Add Event",
+      text: "Placeholder",
     ),
   ];
 
@@ -105,7 +105,7 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
 
   static List<Widget> _adminTabsContent = <Widget>[
-    AddEvent(),
+    Center(child: Text('Placeholder')),
   ];
 
   List<Widget> _currentTabsContent = _userTabsContent;
@@ -143,6 +143,12 @@ class _MyHomePageState extends State<MyHomePage> {
     } else {
       return Container();
     }
+  }
+
+  Future<DocumentSnapshot> getSnapshot(FirebaseUser user) async {
+    DocumentSnapshot document =
+        await _db.collection("members").document(user.uid).get();
+    return document;
   }
 
   Future<Null> _addMember(FirebaseUser user) async {
@@ -232,9 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                           _emailController.clear();
                                           _passController.clear();
 
-                                          setState(() {
-                                            _user = Future.value(user);
-                                          });
+                                          _user = Future.value(user);
                                         } catch (e) {
                                           print(e.message);
                                           if (e.message ==
@@ -296,15 +300,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
                                   try {
                                     FirebaseUser user = await _handleSignIn();
-                                    _addMember(user);
+
+                                    DocumentSnapshot user2 =
+                                        await getSnapshot(user);
+                                    if (user2.data == null) _addMember(user);
+
                                     _emailController.clear();
                                     _passController.clear();
 
-                                    setState(
-                                      () {
-                                        _user = Future.value(user);
-                                      },
-                                    );
+                                    _user = Future.value(user);
                                   } catch (e) {
                                     print(e);
                                   }

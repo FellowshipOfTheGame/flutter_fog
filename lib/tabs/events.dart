@@ -97,12 +97,21 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
                     .where("member", isEqualTo: _ref)
                     .snapshots(),
                 builder: (pcontext, psnapshot) {
-                  if (!psnapshot.hasData) {
+                  if (!psnapshot.hasData)
                     return Center(
                       child: CircularProgressIndicator(),
                     );
-                  } else if (!document['haspresence'])
+                  if (!document['haspresence'])
                     return Card(
+                      child: ListTile(
+                        title: Text(document['name']),
+                        subtitle:
+                            Text(formatTime(document['from'], document['to'])),
+                      ),
+                    );
+                  if (psnapshot.data.documents.length == 0)
+                    return Card(
+                      color: Colors.red,
                       child: ListTile(
                         title: Text(document['name']),
                         subtitle:
@@ -150,19 +159,48 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
 }
 
 class AttendanceWidget extends StatelessWidget {
+  Future<DocumentSnapshot> getSnapshot(FirebaseUser user) async {
+    DocumentSnapshot document =
+        await _db.collection("members").document(user.uid).get();
+    return document;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: _db.collection("events").orderBy("from").snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData)
-          return Center(child: CircularProgressIndicator());
-        return ListView.builder(
-          itemCount: snapshot.data.documents.length,
-          itemBuilder: (context, index) =>
-              _buildListItem(context, snapshot.data.documents[index]),
-        );
-      },
+    return Scaffold(
+      floatingActionButton: FutureBuilder(
+          future: _auth.currentUser(),
+          builder: (ucontext, usnapshot) {
+            if (!usnapshot.hasData) return Container();
+            return FutureBuilder(
+              future: getSnapshot(usnapshot.data),
+              builder: (fabcontext, fabsnapshot) {
+                if (!fabsnapshot.hasData) return Container();
+                if (fabsnapshot.data["authority"] == 1) {
+                  return FloatingActionButton(
+                    child: Icon(Icons.add),
+                    onPressed: () {
+                      Navigator.of(fabcontext).push(MaterialPageRoute(
+                          builder: (fabcontext) => AddEvent()));
+                    },
+                  );
+                }
+                return Container();
+              },
+            );
+          }),
+      body: StreamBuilder(
+        stream: _db.collection("events").orderBy("from").snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: snapshot.data.documents.length,
+            itemBuilder: (context, index) =>
+                _buildListItem(context, snapshot.data.documents[index]),
+          );
+        },
+      ),
     );
   }
 }
@@ -337,115 +375,159 @@ class _AddEvent extends State<AddEvent> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: <Widget>[
-        _DateTimePicker(
-          labelTextDate: 'From',
-          selectedDate: _fromDate,
-          selectedTime: _fromTime,
-          selectDate: (DateTime date) {
-            setState(() {
-              _fromDate = date;
-            });
-          },
-          selectTime: (TimeOfDay time) {
-            setState(() {
-              _fromTime = time;
-            });
-          },
-        ),
-        const SizedBox(height: 12.0),
-        _DateTimePicker(
-          labelTextDate: 'To',
-          selectedDate: _toDate,
-          selectedTime: _toTime,
-          selectDate: (DateTime date) {
-            setState(() {
-              _toDate = date;
-            });
-          },
-          selectTime: (TimeOfDay time) {
-            setState(() {
-              _toTime = time;
-            });
-          },
-        ),
-        const SizedBox(height: 12.0),
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            border: OutlineInputBorder(),
-          ),
-          style: Theme.of(context).textTheme.display1.copyWith(fontSize: 20.0),
-        ),
-        const SizedBox(height: 12.0),
-        CheckboxListTile(
-          title: Text('Has presence'),
-          value: myvalue,
-          onChanged: (bool value) {
-            setState(() {
-              myvalue = value;
-            });
-          },
-        ),
-        const SizedBox(height: 12.0),
-        RaisedButton(
-          child: Text("Add event"),
-          onPressed: () async {
-            DateTime from = DateTime(_fromDate.year, _fromDate.month,
-                _fromDate.day, _fromTime.hour, _fromTime.minute);
-            DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
-                _toTime.hour, _toTime.minute);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Add Event"),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: <Widget>[
+          _DateTimePicker(
+            labelTextDate: 'From',
+            selectedDate: _fromDate,
+            selectedTime: _fromTime,
+            selectDate: (DateTime date) {
+              DateTime from = DateTime(date.year, date.month, date.day,
+                  _fromTime.hour, _fromTime.minute);
+              DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
+                  _toTime.hour, _toTime.minute);
 
-            if (from.day == to.day &&
-                from.month == to.month &&
-                from.year == to.year) {
-              DocumentReference _event =
-                  await _addEvent(from, to, _nameController.text, myvalue);
-
-              if (myvalue) _addPresences(_event);
-            } else {
-              DocumentReference _event = await _addEvent(
-                  from,
-                  DateTime(_fromDate.year, _fromDate.month, _fromDate.day, 23,
-                      59, 59),
-                  _nameController.text,
-                  myvalue);
-
-              if (myvalue) _addPresences(_event);
-
-              for (var i = from.year; i <= to.year; i++) {
-                for (var j = from.month; j <= to.month; j++) {
-                  for (var k = from.day + 1; k < to.day; k++) {
-                    _event = await _addEvent(
-                        DateTime(i, j, k, 0, 0),
-                        DateTime(i, j, k, 23, 59, 59),
-                        _nameController.text,
-                        myvalue);
-
-                    if (myvalue) _addPresences(_event);
-                  }
-                }
+              if (from.isAfter(to)) {
+                _toDate = date;
               }
 
-              _event = await _addEvent(
-                  DateTime(_toDate.year, _toDate.month, _toDate.day, 0, 0),
-                  to,
-                  _nameController.text,
-                  myvalue);
+              setState(() {
+                _fromDate = date;
+              });
+            },
+            selectTime: (TimeOfDay time) {
+              DateTime from = DateTime(_fromDate.year, _fromDate.month,
+                  _fromDate.day, time.hour, time.minute);
+              DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
+                  _toTime.hour, _toTime.minute);
 
-              if (myvalue) _addPresences(_event);
-            }
+              if (from.isAfter(to)) {
+                _toTime = time;
+              }
 
-            _nameController.clear();
-            setState(() {
-              myvalue = false;
-            });
-          },
-        ),
-      ],
+              setState(() {
+                _fromTime = time;
+              });
+            },
+          ),
+          const SizedBox(height: 12.0),
+          _DateTimePicker(
+            labelTextDate: 'To',
+            selectedDate: _toDate,
+            selectedTime: _toTime,
+            selectDate: (DateTime date) {
+              DateTime from = DateTime(_fromDate.year, _fromDate.month,
+                  _fromDate.day, _fromTime.hour, _fromTime.minute);
+              DateTime to = DateTime(date.year, date.month, date.day,
+                  _toTime.hour, _toTime.minute);
+
+              if (from.isAfter(to)) {
+                _fromDate = date;
+              }
+
+              setState(() {
+                _toDate = date;
+              });
+            },
+            selectTime: (TimeOfDay time) {
+              DateTime from = DateTime(_fromDate.year, _fromDate.month,
+                  _fromDate.day, _fromTime.hour, _fromTime.minute);
+              DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
+                  time.hour, time.minute);
+
+              if (from.isAfter(to)) {
+                _fromTime = time;
+              }
+
+              setState(() {
+                _toTime = time;
+              });
+            },
+          ),
+          const SizedBox(height: 12.0),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+            style:
+                Theme.of(context).textTheme.display1.copyWith(fontSize: 20.0),
+          ),
+          const SizedBox(height: 12.0),
+          CheckboxListTile(
+            title: Text('Has presence'),
+            value: myvalue,
+            onChanged: (bool value) {
+              setState(() {
+                myvalue = value;
+              });
+            },
+          ),
+          const SizedBox(height: 12.0),
+          RaisedButton(
+            child: Text("Add event"),
+            onPressed: () async {
+              DateTime from = DateTime(_fromDate.year, _fromDate.month,
+                  _fromDate.day, _fromTime.hour, _fromTime.minute);
+              DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
+                  _toTime.hour, _toTime.minute);
+
+              if (from.day == to.day &&
+                  from.month == to.month &&
+                  from.year == to.year) {
+                DocumentReference _event =
+                    await _addEvent(from, to, _nameController.text, myvalue);
+
+                if (myvalue) _addPresences(_event);
+              } else {
+                DocumentReference _event = await _addEvent(
+                    from,
+                    DateTime(_fromDate.year, _fromDate.month, _fromDate.day, 23,
+                        59, 59),
+                    _nameController.text,
+                    myvalue);
+
+                if (myvalue) _addPresences(_event);
+
+                for (var i = from.year; i <= to.year; i++) {
+                  for (var j = from.month; j <= to.month; j++) {
+                    for (var k = from.day + 1; k < to.day; k++) {
+                      _event = await _addEvent(
+                          DateTime(i, j, k, 0, 0),
+                          DateTime(i, j, k, 23, 59, 59),
+                          _nameController.text,
+                          myvalue);
+
+                      if (myvalue) _addPresences(_event);
+                    }
+                  }
+                }
+
+                _event = await _addEvent(
+                    DateTime(_toDate.year, _toDate.month, _toDate.day, 0, 0),
+                    to,
+                    _nameController.text,
+                    myvalue);
+
+                if (myvalue) _addPresences(_event);
+              }
+
+              _nameController.clear();
+              setState(() {
+                myvalue = false;
+              });
+
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
     );
   }
 }
