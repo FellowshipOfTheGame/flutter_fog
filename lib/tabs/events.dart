@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_fog/extra/inputs.dart';
 import 'package:qr_reader/qr_reader.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -34,27 +35,84 @@ String formatTime(DateTime from, DateTime to) {
   String _toh;
   String _tom;
 
-  if (from.minute < 10)
-    _fromm = "0${from.minute}";
-  else
-    _fromm = "${from.minute}";
-
-  if (to.minute < 10)
-    _tom = "0${to.minute}";
-  else
-    _tom = "${to.minute}";
-
-  if (from.hour < 10)
-    _fromh = "0${from.hour}";
-  else
-    _fromh = "${from.hour}";
-
-  if (to.hour < 10)
-    _toh = "0${to.hour}";
-  else
-    _toh = "${to.hour}";
+  from.minute < 10 ? _fromm = "0${from.minute}" : _fromm = "${from.minute}";
+  to.minute < 10 ? _tom = "0${to.minute}" : _tom = "${to.minute}";
+  from.hour < 10 ? _fromh = "0${from.hour}" : _fromh = "${from.hour}";
+  to.hour < 10 ? _toh = "0${to.hour}" : _toh = "${to.hour}";
 
   return "$_fromh:$_fromm - $_toh:$_tom";
+}
+
+Widget _eventCard(BuildContext context, DocumentSnapshot document) {
+  if (!document['haspresence']) {
+    return Card(
+      child: ListTile(
+        title: Text(document['name']),
+        subtitle: Text(
+          formatTime(document['from'], document['to']),
+        ),
+      ),
+    );
+  } else {
+    return FutureBuilder(
+      future: _auth.currentUser(),
+      builder: (ucontext, usnapshot) {
+        if (!usnapshot.hasData) return LinearProgressIndicator();
+        DocumentReference _ref =
+            _db.collection("members").document(usnapshot.data.uid);
+        return StreamBuilder(
+          stream: _db
+              .collection("presences")
+              .where("event", isEqualTo: document.reference)
+              .where("member", isEqualTo: _ref)
+              .snapshots(),
+          builder: (pcontext, psnapshot) {
+            if (!psnapshot.hasData) return LinearProgressIndicator();
+            if (psnapshot.data.documents.length == 0)
+              return Card(
+                color: Colors.red,
+                child: ListTile(
+                  title: Text(document['name']),
+                  subtitle: Text(formatTime(document['from'], document['to'])),
+                ),
+              );
+            return FlatButton(
+              padding: EdgeInsets.zero,
+              onPressed: () async {
+                String barcode = await QRCodeReader()
+                    .setAutoFocusIntervalInMs(200)
+                    .setForceAutoFocus(true)
+                    .setTorchEnabled(true)
+                    .setHandlePermissions(true)
+                    .setExecuteAfterPermissionGranted(true)
+                    .scan();
+                if (barcode == document.documentID &&
+                    (psnapshot.data.documents[0]['went'] == null ||
+                        !psnapshot.data.documents[0]['went'])) {
+                  Firestore.instance.runTransaction((transaction) async {
+                    DocumentSnapshot meeting =
+                        await transaction.get(psnapshot.data.reference);
+                    await transaction.update(meeting.reference, {'went': true});
+                  });
+                }
+              },
+              child: Card(
+                color: psnapshot.data.documents[0]['went']
+                    ? Colors.green
+                    : Colors.red,
+                child: ListTile(
+                  title: Text(document['name']),
+                  subtitle: Text(
+                    formatTime(document['from'], document['to']),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
@@ -78,82 +136,7 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
           ],
         ),
       ),
-      Expanded(
-        flex: 5,
-        child: FutureBuilder(
-            future: _auth.currentUser(),
-            builder: (ucontext, usnapshot) {
-              if (!usnapshot.hasData) {
-                return Center(
-                  child: CircularProgressIndicator(),
-                );
-              }
-              DocumentReference _ref =
-                  _db.collection("members").document(usnapshot.data.uid);
-              return StreamBuilder(
-                stream: _db
-                    .collection("presences")
-                    .where("event", isEqualTo: document.reference)
-                    .where("member", isEqualTo: _ref)
-                    .snapshots(),
-                builder: (pcontext, psnapshot) {
-                  if (!psnapshot.hasData)
-                    return Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  if (!document['haspresence'])
-                    return Card(
-                      child: ListTile(
-                        title: Text(document['name']),
-                        subtitle:
-                            Text(formatTime(document['from'], document['to'])),
-                      ),
-                    );
-                  if (psnapshot.data.documents.length == 0)
-                    return Card(
-                      color: Colors.red,
-                      child: ListTile(
-                        title: Text(document['name']),
-                        subtitle:
-                            Text(formatTime(document['from'], document['to'])),
-                      ),
-                    );
-                  return FlatButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () async {
-                      String barcode = await QRCodeReader()
-                          .setAutoFocusIntervalInMs(200)
-                          .setForceAutoFocus(true)
-                          .setTorchEnabled(true)
-                          .setHandlePermissions(true)
-                          .setExecuteAfterPermissionGranted(true)
-                          .scan();
-                      if (barcode == document.documentID &&
-                          (psnapshot.data.documents[0]['went'] == null ||
-                              !psnapshot.data.documents[0]['went'])) {
-                        Firestore.instance.runTransaction((transaction) async {
-                          DocumentSnapshot meeting =
-                              await transaction.get(psnapshot.data.reference);
-                          await transaction
-                              .update(meeting.reference, {'went': true});
-                        });
-                      }
-                    },
-                    child: Card(
-                      color: psnapshot.data.documents[0]['went']
-                          ? Colors.green
-                          : Colors.red,
-                      child: ListTile(
-                        title: Text(document['name']),
-                        subtitle:
-                            Text(formatTime(document['from'], document['to'])),
-                      ),
-                    ),
-                  );
-                },
-              );
-            }),
-      )
+      Expanded(flex: 5, child: _eventCard(context, document))
     ],
   );
 }
@@ -192,8 +175,7 @@ class AttendanceWidget extends StatelessWidget {
       body: StreamBuilder(
         stream: _db.collection("events").orderBy("from").snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
-            return Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) return LinearProgressIndicator();
           return ListView.builder(
             itemCount: snapshot.data.documents.length,
             itemBuilder: (context, index) =>
@@ -201,116 +183,6 @@ class AttendanceWidget extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class _InputDropdown extends StatelessWidget {
-  const _InputDropdown(
-      {Key key,
-      this.child,
-      this.labelText,
-      this.valueText,
-      this.valueStyle,
-      this.onPressed})
-      : super(key: key);
-
-  final String labelText;
-  final String valueText;
-  final TextStyle valueStyle;
-  final VoidCallback onPressed;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: labelText,
-          border: OutlineInputBorder(),
-        ),
-        baseStyle: valueStyle,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(valueText, style: valueStyle),
-            Icon(Icons.arrow_drop_down,
-                color: Theme.of(context).brightness == Brightness.light
-                    ? Colors.grey.shade700
-                    : Colors.white70),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DateTimePicker extends StatelessWidget {
-  const _DateTimePicker(
-      {Key key,
-      this.labelTextDate,
-      this.labelTextTime,
-      this.selectedDate,
-      this.selectedTime,
-      this.selectDate,
-      this.selectTime})
-      : super(key: key);
-
-  final String labelTextDate;
-  final String labelTextTime;
-  final DateTime selectedDate;
-  final TimeOfDay selectedTime;
-  final ValueChanged<DateTime> selectDate;
-  final ValueChanged<TimeOfDay> selectTime;
-
-  Future<Null> _selectDate(BuildContext context) async {
-    final DateTime picked = await showDatePicker(
-        context: context,
-        initialDate: selectedDate,
-        firstDate: DateTime(2015, 8),
-        lastDate: DateTime(2101));
-    if (picked != null && picked != selectedDate) selectDate(picked);
-  }
-
-  Future<Null> _selectTime(BuildContext context) async {
-    final TimeOfDay picked =
-        await showTimePicker(context: context, initialTime: selectedTime);
-    if (picked != null && picked != selectedTime) selectTime(picked);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final TextStyle valueStyle = Theme.of(context).textTheme.title;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        Expanded(
-          flex: 4,
-          child: _InputDropdown(
-            labelText: labelTextDate,
-            valueText:
-                "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
-            valueStyle: valueStyle,
-            onPressed: () {
-              _selectDate(context);
-            },
-          ),
-        ),
-        const SizedBox(width: 12.0),
-        Expanded(
-          flex: 3,
-          child: _InputDropdown(
-            labelText: labelTextTime,
-            valueText: selectedTime.format(context),
-            valueStyle: valueStyle,
-            onPressed: () {
-              _selectTime(context);
-            },
-          ),
-        ),
-      ],
     );
   }
 }
@@ -382,7 +254,7 @@ class _AddEvent extends State<AddEvent> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: <Widget>[
-          _DateTimePicker(
+          DateTimePicker(
             labelTextDate: 'From',
             selectedDate: _fromDate,
             selectedTime: _fromTime,
@@ -416,7 +288,7 @@ class _AddEvent extends State<AddEvent> {
             },
           ),
           const SizedBox(height: 12.0),
-          _DateTimePicker(
+          DateTimePicker(
             labelTextDate: 'To',
             selectedDate: _toDate,
             selectedTime: _toTime,
@@ -456,8 +328,6 @@ class _AddEvent extends State<AddEvent> {
               labelText: 'Name',
               border: OutlineInputBorder(),
             ),
-            style:
-                Theme.of(context).textTheme.display1.copyWith(fontSize: 20.0),
           ),
           const SizedBox(height: 12.0),
           CheckboxListTile(

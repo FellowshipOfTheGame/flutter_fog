@@ -55,7 +55,8 @@ class _SignUpWidget extends State<SignUpWidget> {
       body: FutureBuilder(
         future: _sigin,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return Container();
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
           return Stack(
             children: <Widget>[
               ListView(

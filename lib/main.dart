@@ -179,7 +179,8 @@ class _MyHomePageState extends State<MyHomePage> {
             body: FutureBuilder(
               future: _loading,
               builder: (lcontext, lsnapshot) {
-                if (!lsnapshot.hasData) return Container();
+                if (!lsnapshot.hasData)
+                  return Center(child: CircularProgressIndicator());
                 return Stack(
                   children: <Widget>[
                     Padding(
