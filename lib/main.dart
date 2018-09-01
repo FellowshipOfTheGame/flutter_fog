@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_fog/signup.dart';
 import 'package:flutter_fog/tabs/events.dart';
+import 'package:flutter_fog/tabs/projects.dart';
+import 'package:flutter_fog/tabs/worked.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -88,13 +90,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static List<Tab> _userTabs = <Tab>[
     Tab(
-      text: "Attendance",
+      text: "Callendar",
+    ),
+    Tab(
+      text: 'Work',
     ),
   ];
 
   static List<Tab> _adminTabs = <Tab>[
     Tab(
-      text: "Placeholder",
+      text: "Projects",
     ),
   ];
 
@@ -102,10 +107,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static List<Widget> _userTabsContent = <Widget>[
     AttendanceWidget(),
+    AddWork(),
   ];
 
   static List<Widget> _adminTabsContent = <Widget>[
-    Center(child: Text('Placeholder')),
+    ProjectsWidget(),
   ];
 
   List<Widget> _currentTabsContent = _userTabsContent;
@@ -146,8 +152,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<DocumentSnapshot> getSnapshot(FirebaseUser user) async {
-    DocumentSnapshot document =
-        await _db.collection("members").document(user.uid).get();
+    DocumentSnapshot document = await members.document(user.uid).get();
     return document;
   }
 
@@ -156,6 +161,7 @@ class _MyHomePageState extends State<MyHomePage> {
     document.setData(<String, dynamic>{
       'name': user.displayName,
       'authority': 0,
+      'projects': [],
     });
   }
 
@@ -192,6 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           children: <Widget>[
                             TextFormField(
                               controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
                                 labelText: 'Email',
                                 border: OutlineInputBorder(),

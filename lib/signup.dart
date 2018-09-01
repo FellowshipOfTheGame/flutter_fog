@@ -26,6 +26,7 @@ class _SignUpWidget extends State<SignUpWidget> {
     document.setData(<String, dynamic>{
       'name': user.displayName,
       'authority': 0,
+      'projects': [],
     });
   }
 
@@ -69,7 +70,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                       TextFormField(
                         controller: _nameController,
                         decoration: InputDecoration(
-                          labelText: 'Name',
+                          labelText: 'Name *',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
@@ -79,8 +80,9 @@ class _SignUpWidget extends State<SignUpWidget> {
                       const SizedBox(height: 12.0),
                       TextFormField(
                         controller: _emailController,
+                        keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'Email *',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
@@ -94,7 +96,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                       TextFormField(
                         controller: _passController,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: 'Password *',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
@@ -111,7 +113,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                       TextFormField(
                         controller: _cpassController,
                         decoration: InputDecoration(
-                          labelText: 'Confirm Password',
+                          labelText: 'Confirm Password *',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
