@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:datetime_picker_formfield/datetime_picker_formfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_fog/extra/inputs.dart';
+import 'package:intl/intl.dart';
 import 'package:qr_reader/qr_reader.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -254,6 +256,9 @@ class _AddEvent extends State<AddEvent> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: <Widget>[
+          DateTimePickerFormField(
+            format: DateFormat("EEEE, MMMM d, yyyy 'at' h:mma"),
+          ),
           DateTimePicker(
             labelTextDate: 'From',
             selectedDate: _fromDate,
