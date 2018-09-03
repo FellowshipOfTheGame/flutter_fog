@@ -7,12 +7,5 @@
 build/
 
 .flutter-plugins
-/android/app/key.properties
-.idea/
-android/app/key.properties
-android/app/google-services.json
-android/key.properties
-android/google-services.json
-
-node_modules/
-package-lock.json
+.vscode
+.idea

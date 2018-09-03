@@ -90,13 +90,14 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                       if (!snapshot.hasData) return Container();
                       List<DropdownMenuItem<String>> _items =
                           List<DropdownMenuItem<String>>();
-                      snapshot.data.documents.forEach((document) {
+                      for (DocumentSnapshot document
+                          in snapshot.data.documents) {
                         String _name = document['name'];
                         _items.add(DropdownMenuItem<String>(
                           value: _name,
                           child: Text(_name),
                         ));
-                      });
+                      }
                       if (_items.isEmpty)
                         _items.add(
                           DropdownMenuItem<String>(
