@@ -1,4 +1,4 @@
-package icmc.fog.flutterfog
+package icmc.fog.fogmembers
 
 import android.os.Bundle
 

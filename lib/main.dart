@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_fog/signup.dart';
-import 'package:flutter_fog/tabs/events.dart';
-import 'package:flutter_fog/tabs/projects.dart';
-import 'package:flutter_fog/tabs/worked.dart';
+import 'package:fog_members/signup.dart';
+import 'package:fog_members/tabs/events.dart';
+import 'package:fog_members/tabs/projects.dart';
+import 'package:fog_members/tabs/worked.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -253,12 +253,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                                   'There is no user record corresponding to this identifier. The user may have been deleted.' ||
                                               e.message ==
                                                   'The password is invalid or the user does not have a password.') {
-                                            Scaffold
-                                                .of(lcontext)
+                                            Scaffold.of(lcontext)
                                                 .showSnackBar(SnackBar(
-                                                  content: Text(
-                                                      'Invalid email/password'),
-                                                ));
+                                              content: Text(
+                                                  'Invalid email/password'),
+                                            ));
                                             _passController.clear();
                                           }
                                         }
@@ -279,9 +278,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                         _passController.clear();
                                         _emailController.clear();
 
-                                        FirebaseUser _user2 = await Navigator
-                                            .of(context)
-                                            .push(
+                                        FirebaseUser _user2 =
+                                            await Navigator.of(context).push(
                                                 MaterialPageRoute<FirebaseUser>(
                                                     builder: (context) =>
                                                         SignUpWidget()));
@@ -354,7 +352,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             drawer: Drawer(
               child: ListView(
-                padding: EdgeInsets.all(8.0),
                 children: <Widget>[
                   DrawerHeader(
                     child: Text("Menu"),
@@ -362,34 +359,60 @@ class _MyHomePageState extends State<MyHomePage> {
                       color: Color(0xFF1E2264),
                     ),
                   ),
-                  ListTile(
-                    title: Text("Área Principal"),
-                    onTap: () {
-                      setState(() {
-                        _currentTabsContent = _userTabsContent;
-                        _currentTabs = _userTabs;
-                      });
-                      Navigator.pop(context);
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      title: Text("Área Principal"),
+                      onTap: () {
+                        setState(() {
+                          _currentTabsContent = _userTabsContent;
+                          _currentTabs = _userTabs;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                  FutureBuilder(
+                    future: getSnapshot(snapshot.data),
+                    builder: (ucontext, usnapshot) {
+                      if (!usnapshot.hasData) return Container();
+                      if (usnapshot.data["authority"] == 1) {
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                            left: 8.0,
+                            right: 8.0,
+                            bottom: 8.0,
+                          ),
+                          child: ListTile(
+                            title: Text("Ademir"),
+                            onTap: () {
+                              setState(() {
+                                _currentTabsContent = _adminTabsContent;
+                                _currentTabs = _adminTabs;
+                              });
+                              Navigator.pop(context);
+                            },
+                          ),
+                        );
+                      }
+                      return Container();
                     },
                   ),
-                  ListTile(
-                    title: Text("Ademir"),
-                    onTap: () {
-                      setState(() {
-                        _currentTabsContent = _adminTabsContent;
-                        _currentTabs = _adminTabs;
-                      });
-                      Navigator.pop(context);
-                    },
-                  ),
-                  ListTile(
-                    title: Text("Logout"),
-                    onTap: () {
-                      setState(() {
-                        _user = _handleSignOut();
-                      });
-                      Navigator.pop(context);
-                    },
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 8.0,
+                      right: 8.0,
+                      top: 4.0,
+                    ),
+                    child: ListTile(
+                      title: Text("Logout"),
+                      onTap: () {
+                        setState(() {
+                          _user = _handleSignOut();
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
                   ),
                 ],
               ),

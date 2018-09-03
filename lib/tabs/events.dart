@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:datetime_picker_formfield/datetime_picker_formfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_fog/extra/inputs.dart';
+import 'package:fog_members/extra/inputs.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_reader/qr_reader.dart';
 
