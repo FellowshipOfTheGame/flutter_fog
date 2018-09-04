@@ -71,7 +71,6 @@ class _SignUpWidget extends State<SignUpWidget> {
                         controller: _nameController,
                         decoration: InputDecoration(
                           labelText: 'Name *',
-                          border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value.isEmpty) return 'Name is empty';
@@ -83,7 +82,6 @@ class _SignUpWidget extends State<SignUpWidget> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: 'Email *',
-                          border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value.isEmpty) return 'Email is empty';
@@ -97,7 +95,6 @@ class _SignUpWidget extends State<SignUpWidget> {
                         controller: _passController,
                         decoration: InputDecoration(
                           labelText: 'Password *',
-                          border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value.isEmpty) return 'Password is empty';
@@ -114,7 +111,6 @@ class _SignUpWidget extends State<SignUpWidget> {
                         controller: _cpassController,
                         decoration: InputDecoration(
                           labelText: 'Confirm Password *',
-                          border: OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (value != _passController.text)
@@ -148,18 +144,17 @@ class _SignUpWidget extends State<SignUpWidget> {
                           if (e.message ==
                               'The email address is already in use by another account.') {
                             Scaffold.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Email already in use'),
-                                  ),
-                                );
+                              SnackBar(
+                                content: Text('Email already in use'),
+                              ),
+                            );
                           } else {
                             print(e.message);
                             Scaffold.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text('Unknown error please report'),
-                                  ),
-                                );
+                              SnackBar(
+                                content: Text('Unknown error please report'),
+                              ),
+                            );
                           }
                           setState(() {
                             _sigin = Future.value(false);

@@ -65,6 +65,11 @@ class MyApp extends StatelessWidget {
         buttonColor: Color(0xFFF1CD36),
         accentColor: Color(0xFFF1CD36),
         backgroundColor: Color(0xFFB8B8B8),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(0.0)),
+          ),
+        ),
       ),
       home: MyHomePage(title: 'FoG'),
     );
@@ -189,144 +194,138 @@ class _MyHomePageState extends State<MyHomePage> {
                   return Center(child: CircularProgressIndicator());
                 return Stack(
                   children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0, bottom: 16.0, right: 16.0, top: 32.0),
-                      child: Form(
-                        key: _formKey,
-                        child: ListView(
-                          children: <Widget>[
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) {
-                                if (value.isEmpty) return 'Email is empty';
-                                if (value.contains(' ') ||
-                                    !value
-                                        .contains(RegExp(r'^[^@]+@[^.]+\..+$')))
-                                  return 'Invalid email';
-                              },
+                    Form(
+                      key: _formKey,
+                      child: ListView(
+                        padding: const EdgeInsets.only(
+                            left: 16.0, bottom: 16.0, right: 16.0, top: 32.0),
+                        children: <Widget>[
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
                             ),
-                            const SizedBox(height: 12.0),
-                            TextFormField(
-                              controller: _passController,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                border: OutlineInputBorder(),
-                              ),
-                              obscureText: true,
-                              validator: (value) {
-                                if (value.isEmpty) return 'Password is empty';
-                              },
+                            validator: (value) {
+                              if (value.isEmpty) return 'Email is empty';
+                              if (value.contains(' ') ||
+                                  !value.contains(RegExp(r'^[^@]+@[^.]+\..+$')))
+                                return 'Invalid email';
+                            },
+                          ),
+                          const SizedBox(height: 12.0),
+                          TextFormField(
+                            controller: _passController,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
                             ),
-                            const SizedBox(height: 16.0),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: <Widget>[
-                                Expanded(
-                                  child: RaisedButton(
-                                    child: Text('Login'),
-                                    onPressed: () async {
-                                      if (_formKey.currentState.validate() &&
-                                          !lsnapshot.data) {
-                                        setState(() {
-                                          _loading = Future.value(true);
-                                        });
+                            obscureText: true,
+                            validator: (value) {
+                              if (value.isEmpty) return 'Password is empty';
+                            },
+                          ),
+                          const SizedBox(height: 16.0),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: <Widget>[
+                              Expanded(
+                                child: RaisedButton(
+                                  child: Text('Login'),
+                                  onPressed: () async {
+                                    if (_formKey.currentState.validate() &&
+                                        !lsnapshot.data) {
+                                      setState(() {
+                                        _loading = Future.value(true);
+                                      });
 
-                                        try {
-                                          FirebaseUser user = await _auth
-                                              .signInWithEmailAndPassword(
-                                                  email: _emailController.text,
-                                                  password:
-                                                      _passController.text);
-                                          _emailController.clear();
-                                          _passController.clear();
-
-                                          _user = Future.value(user);
-                                        } catch (e) {
-                                          print(e.message);
-                                          if (e.message ==
-                                                  'There is no user record corresponding to this identifier. The user may have been deleted.' ||
-                                              e.message ==
-                                                  'The password is invalid or the user does not have a password.') {
-                                            Scaffold.of(lcontext)
-                                                .showSnackBar(SnackBar(
-                                              content: Text(
-                                                  'Invalid email/password'),
-                                            ));
-                                            _passController.clear();
-                                          }
-                                        }
-
-                                        setState(() {
-                                          _loading = Future.value(false);
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12.0),
-                                Expanded(
-                                  child: RaisedButton(
-                                    child: Text('Signup'),
-                                    onPressed: () async {
-                                      if (!lsnapshot.data) {
-                                        _passController.clear();
+                                      try {
+                                        FirebaseUser user = await _auth
+                                            .signInWithEmailAndPassword(
+                                                email: _emailController.text,
+                                                password: _passController.text);
                                         _emailController.clear();
+                                        _passController.clear();
 
-                                        FirebaseUser _user2 =
-                                            await Navigator.of(context).push(
-                                                MaterialPageRoute<FirebaseUser>(
-                                                    builder: (context) =>
-                                                        SignUpWidget()));
-                                        setState(() {
-                                          _user = Future.value(_user2);
-                                        });
+                                        _user = Future.value(user);
+                                      } catch (e) {
+                                        print(e.message);
+                                        if (e.message ==
+                                                'There is no user record corresponding to this identifier. The user may have been deleted.' ||
+                                            e.message ==
+                                                'The password is invalid or the user does not have a password.') {
+                                          Scaffold.of(lcontext)
+                                              .showSnackBar(SnackBar(
+                                            content:
+                                                Text('Invalid email/password'),
+                                          ));
+                                          _passController.clear();
+                                        }
                                       }
-                                    },
-                                  ),
+
+                                      setState(() {
+                                        _loading = Future.value(false);
+                                      });
+                                    }
+                                  },
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 16.0),
-                            RaisedButton(
-                              color: Colors.white,
-                              shape: Border(),
-                              elevation: 1.0,
-                              child: GoogleButton(),
-                              onPressed: () async {
-                                if (!lsnapshot.data) {
-                                  setState(() {
-                                    _loading = Future.value(true);
-                                  });
+                              ),
+                              const SizedBox(width: 12.0),
+                              Expanded(
+                                child: RaisedButton(
+                                  child: Text('Signup'),
+                                  onPressed: () async {
+                                    if (!lsnapshot.data) {
+                                      _passController.clear();
+                                      _emailController.clear();
 
-                                  try {
-                                    FirebaseUser user = await _handleSignIn();
+                                      FirebaseUser _user2 =
+                                          await Navigator.of(context).push(
+                                              MaterialPageRoute<FirebaseUser>(
+                                                  builder: (context) =>
+                                                      SignUpWidget()));
+                                      setState(() {
+                                        _user = Future.value(_user2);
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16.0),
+                          RaisedButton(
+                            color: Colors.white,
+                            shape: Border(),
+                            elevation: 1.0,
+                            child: GoogleButton(),
+                            onPressed: () async {
+                              if (!lsnapshot.data) {
+                                setState(() {
+                                  _loading = Future.value(true);
+                                });
 
-                                    DocumentSnapshot user2 =
-                                        await getSnapshot(user);
-                                    if (user2.data == null) _addMember(user);
+                                try {
+                                  FirebaseUser user = await _handleSignIn();
 
-                                    _emailController.clear();
-                                    _passController.clear();
+                                  DocumentSnapshot user2 =
+                                      await getSnapshot(user);
+                                  if (user2.data == null) _addMember(user);
 
-                                    _user = Future.value(user);
-                                  } catch (e) {
-                                    print(e);
-                                  }
+                                  _emailController.clear();
+                                  _passController.clear();
 
-                                  setState(() {
-                                    _loading = Future.value(false);
-                                  });
+                                  _user = Future.value(user);
+                                } catch (e) {
+                                  print(e);
                                 }
-                              },
-                            ),
-                          ],
-                        ),
+
+                                setState(() {
+                                  _loading = Future.value(false);
+                                });
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     loading(lsnapshot.data),
@@ -344,11 +343,8 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               title: Text(widget.title),
             ),
-            body: Padding(
-              padding: const EdgeInsets.only(right: 8.0, left: 8.0),
-              child: TabBarView(
-                children: _currentTabsContent,
-              ),
+            body: TabBarView(
+              children: _currentTabsContent,
             ),
             drawer: Drawer(
               child: ListView(

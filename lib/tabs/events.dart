@@ -59,7 +59,7 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
     return FutureBuilder(
       future: _auth.currentUser(),
       builder: (ucontext, usnapshot) {
-        if (!usnapshot.hasData) return LinearProgressIndicator();
+        if (!usnapshot.hasData) return Container();
         DocumentReference _ref =
             _db.collection("members").document(usnapshot.data.uid);
         return StreamBuilder(
@@ -69,7 +69,7 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
               .where("member", isEqualTo: _ref)
               .snapshots(),
           builder: (pcontext, psnapshot) {
-            if (!psnapshot.hasData) return LinearProgressIndicator();
+            if (!psnapshot.hasData) return Container();
             if (psnapshot.data.documents.length == 0)
               return Card(
                 color: Colors.red,
@@ -177,7 +177,7 @@ class AttendanceWidget extends StatelessWidget {
       body: StreamBuilder(
         stream: _db.collection("events").orderBy("from").snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return LinearProgressIndicator();
+          if (!snapshot.hasData) return Container();
           return ListView.builder(
             itemCount: snapshot.data.documents.length,
             itemBuilder: (context, index) =>
@@ -329,13 +329,12 @@ class _AddEvent extends State<AddEvent> {
           const SizedBox(height: 12.0),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Name',
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12.0),
-          CheckboxListTile(
+          SwitchListTile(
             title: Text('Has presence'),
             value: myvalue,
             onChanged: (bool value) {

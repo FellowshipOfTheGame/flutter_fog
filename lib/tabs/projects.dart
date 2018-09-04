@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 
 final Firestore _db = Firestore.instance;
 
+Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
+  return Card(
+    child: Text(document['name']),
+  );
+}
+
 class ProjectsWidget extends StatefulWidget {
   @override
   _ProjectsWidgetState createState() => _ProjectsWidgetState();
@@ -13,6 +19,11 @@ class ProjectsWidget extends StatefulWidget {
 class _ProjectsWidgetState extends State<ProjectsWidget> {
   final _dialogController = TextEditingController();
   CollectionReference get projects => _db.collection('projects');
+  CollectionReference get members => _db.collection('members');
+  List<DocumentSnapshot> _notinproject;
+  List<DropdownMenuItem<String>> _notinprojectItems =
+      List<DropdownMenuItem<String>>();
+  String _selectedMember;
   String _project;
 
   Future<DocumentReference> _addProject(String name) async {
@@ -22,6 +33,12 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
     });
 
     return document;
+  }
+
+  @override
+  void dispose() {
+    _dialogController.dispose();
+    super.dispose();
   }
 
   Future<Null> _projectDialog() async {
@@ -60,76 +77,197 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
         })) {
       case 1:
         _addProject(_dialogController.text);
-        _dialogController.dispose();
+        _dialogController.clear();
         break;
       case 0:
         break;
     }
   }
 
+  Future<Null> _attMembers() async {
+    _notinprojectItems = List<DropdownMenuItem<String>>();
+    QuerySnapshot _projectDocument =
+        await projects.where("name", isEqualTo: _project).getDocuments();
+    if (_projectDocument.documents.length > 0) {
+      DocumentReference _projectReference =
+          _projectDocument.documents[0].reference;
+      QuerySnapshot _membersDocuments = await members.getDocuments();
+      _notinproject = List<DocumentSnapshot>();
+
+      for (DocumentSnapshot member in _membersDocuments.documents) {
+        if (!member['projects'].contains(_projectReference)) {
+          _notinproject.add(member);
+          _notinprojectItems.add(DropdownMenuItem<String>(
+            value: member['name'],
+            child: Text(member['name']),
+          ));
+        }
+      }
+    }
+    if (_notinprojectItems.isEmpty) {
+      _notinprojectItems.add(
+        DropdownMenuItem<String>(
+          child: Container(),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(
-        left: 16.0,
-        top: 16.0,
-        bottom: 16.0,
-      ),
+    if (_notinprojectItems.isEmpty) {
+      _notinprojectItems.add(
+        DropdownMenuItem<String>(
+          child: Container(),
+        ),
+      );
+    }
+    return Column(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: StreamBuilder(
-                    stream: projects.snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return Container();
-                      List<DropdownMenuItem<String>> _items =
-                          List<DropdownMenuItem<String>>();
-                      for (DocumentSnapshot document
-                          in snapshot.data.documents) {
-                        String _name = document['name'];
-                        _items.add(DropdownMenuItem<String>(
-                          value: _name,
-                          child: Text(_name),
-                        ));
-                      }
-                      if (_items.isEmpty)
-                        _items.add(
-                          DropdownMenuItem<String>(
-                            child: Container(),
-                          ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: InputDecorator(
+                  decoration: InputDecoration(),
+                  child: DropdownButtonHideUnderline(
+                    child: StreamBuilder(
+                      stream: projects.snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return Container();
+                        List<DropdownMenuItem<String>> _items =
+                            List<DropdownMenuItem<String>>();
+                        snapshot.data.documents.forEach((document) {
+                          String _name = document['name'];
+                          _items.add(DropdownMenuItem<String>(
+                            value: _name,
+                            child: Text(_name),
+                          ));
+                        });
+                        if (_items.isEmpty)
+                          _items.add(
+                            DropdownMenuItem<String>(
+                              child: Container(),
+                            ),
+                          );
+                        return DropdownButton<String>(
+                          hint: const Text('Select project'),
+                          value: _project,
+                          isDense: true,
+                          items: _items,
+                          onChanged: (value) async {
+                            await _attMembers();
+                            setState(() {
+                              _project = value;
+                            });
+                          },
                         );
-                      return DropdownButton<String>(
-                        hint: const Text('Select project'),
-                        value: _project,
-                        isDense: true,
-                        items: _items,
-                        onChanged: (value) {
-                          setState(() {
-                            _project = value;
-                          });
-                        },
-                      );
-                    },
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-            FlatButton(
-              shape: BeveledRectangleBorder(),
-              child: Icon(
-                Icons.add,
+              FlatButton(
+                shape: BeveledRectangleBorder(),
+                child: Icon(
+                  Icons.add,
+                ),
+                onPressed: () async {
+                  await _projectDialog();
+                },
               ),
-              onPressed: () async {
-                await _projectDialog();
-              },
-            ),
-          ],
+            ],
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder(
+            stream: projects.where("name", isEqualTo: _project).snapshots(),
+            builder: (pcontext, psnapshot) {
+              if (!psnapshot.hasData)
+                return Center(child: CircularProgressIndicator());
+              if (psnapshot.data.documents.length <= 0) return Container();
+              return StreamBuilder(
+                stream: members.snapshots(),
+                builder: (mcontext, msnapshot) {
+                  if (!msnapshot.hasData)
+                    return Center(child: CircularProgressIndicator());
+
+                  List<DocumentSnapshot> _inproject = List<DocumentSnapshot>();
+                  for (DocumentSnapshot member in msnapshot.data.documents) {
+                    if (member['projects']
+                        .contains(psnapshot.data.documents[0].reference)) {
+                      _inproject.add(member);
+                    }
+                  }
+                  return ListView.builder(
+                    itemCount: _inproject.length,
+                    itemBuilder: (context, index) =>
+                        _buildListItem(context, _inproject[index]),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Members *',
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      hint: Text('Select member'),
+                      value: _selectedMember,
+                      isDense: true,
+                      items: _notinprojectItems,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedMember = value;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8.0),
+              RaisedButton(
+                child: Text('Add Member'),
+                onPressed: () async {
+                  QuerySnapshot _projectDocument = await projects
+                      .where("name", isEqualTo: _project)
+                      .getDocuments();
+                  if (_projectDocument.documents.length > 0) {
+                    DocumentReference _projectReference =
+                        _projectDocument.documents[0].reference;
+                    DocumentSnapshot _theone;
+                    for (DocumentSnapshot member in _notinproject) {
+                      if (member['name'] == _selectedMember) {
+                        _theone = member;
+                        break;
+                      }
+                    }
+                    dynamic aux = List<dynamic>.from(_theone['projects']);
+                    aux.add(_projectReference);
+                    await Firestore.instance
+                        .runTransaction((transaction) async {
+                      await transaction
+                          .update(_theone.reference, {'projects': aux});
+                    });
+
+                    await _attMembers();
+                    setState(() {
+                      _selectedMember = null;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
