@@ -5,9 +5,35 @@ import 'package:flutter/material.dart';
 
 final Firestore _db = Firestore.instance;
 
-Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
-  return Card(
-    child: Text(document['name']),
+Widget _buildListItem(BuildContext context, DocumentSnapshot document,
+    DocumentReference project) {
+  return StreamBuilder(
+    stream: _db
+        .collection('workedhours')
+        .where("member", isEqualTo: document.documentID)
+        .where("project", isEqualTo: project)
+        .snapshots(),
+    builder: (wcontext, wsnapshot) {
+      if (!wsnapshot.hasData) return Container();
+      int work = 0;
+      for (DocumentSnapshot workedhours in wsnapshot.data.documents) {
+        work += workedhours['hours'] * 60;
+        work += workedhours['minutes'];
+      }
+      return Card(
+        child: ListTile(
+          title: Text(document['name']),
+          subtitle: Text('Worked $work minutes'),
+          trailing: FlatButton(
+            shape: BeveledRectangleBorder(),
+            child: Icon(
+              Icons.delete,
+            ),
+            onPressed: () {},
+          ),
+        ),
+      );
+    },
   );
 }
 
@@ -55,22 +81,23 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                   autofocus: true,
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  SimpleDialogOption(
-                    onPressed: () {
-                      Navigator.pop(context, 0);
-                    },
-                    child: const Text('Cancel'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () {
-                      Navigator.pop(context, 1);
-                    },
-                    child: const Text('Submit'),
-                  ),
-                ],
+              ButtonTheme.bar(
+                child: ButtonBar(
+                  children: <Widget>[
+                    SimpleDialogOption(
+                      onPressed: () {
+                        Navigator.pop(context, 0);
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () {
+                        Navigator.pop(context, 1);
+                      },
+                      child: const Text('Submit'),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
@@ -133,7 +160,7 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                   decoration: InputDecoration(),
                   child: DropdownButtonHideUnderline(
                     child: StreamBuilder(
-                      stream: projects.snapshots(),
+                      stream: projects.orderBy('name').snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) return Container();
                         List<DropdownMenuItem<String>> _items =
@@ -200,10 +227,39 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                       _inproject.add(member);
                     }
                   }
+
                   return ListView.builder(
-                    itemCount: _inproject.length,
-                    itemBuilder: (context, index) =>
-                        _buildListItem(context, _inproject[index]),
+                    padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+                    itemCount: _inproject.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index != _inproject.length)
+                        return _buildListItem(context, _inproject[index],
+                            psnapshot.data.documents[0].reference);
+                      else
+                        return StreamBuilder(
+                          stream: _db
+                              .collection('workedhours')
+                              .where("project",
+                                  isEqualTo:
+                                      psnapshot.data.documents[0].reference)
+                              .snapshots(),
+                          builder: (wcontext, wsnapshot) {
+                            if (!wsnapshot.hasData) return Container();
+                            int work = 0;
+                            for (DocumentSnapshot workedhours
+                                in wsnapshot.data.documents) {
+                              work += workedhours['hours'] * 60;
+                              work += workedhours['minutes'];
+                            }
+                            return Card(
+                              child: ListTile(
+                                title: Text('Summary'),
+                                subtitle: Text('Worked $work minutes'),
+                              ),
+                            );
+                          },
+                        );
+                    },
                   );
                 },
               );
@@ -238,31 +294,33 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
               RaisedButton(
                 child: Text('Add Member'),
                 onPressed: () async {
-                  QuerySnapshot _projectDocument = await projects
-                      .where("name", isEqualTo: _project)
-                      .getDocuments();
-                  if (_projectDocument.documents.length > 0) {
-                    DocumentReference _projectReference =
-                        _projectDocument.documents[0].reference;
-                    DocumentSnapshot _theone;
-                    for (DocumentSnapshot member in _notinproject) {
-                      if (member['name'] == _selectedMember) {
-                        _theone = member;
-                        break;
+                  if (_selectedMember != null) {
+                    QuerySnapshot _projectDocument = await projects
+                        .where("name", isEqualTo: _project)
+                        .getDocuments();
+                    if (_projectDocument.documents.length > 0) {
+                      DocumentReference _projectReference =
+                          _projectDocument.documents[0].reference;
+                      DocumentSnapshot _theone;
+                      for (DocumentSnapshot member in _notinproject) {
+                        if (member['name'] == _selectedMember) {
+                          _theone = member;
+                          break;
+                        }
                       }
-                    }
-                    dynamic aux = List<dynamic>.from(_theone['projects']);
-                    aux.add(_projectReference);
-                    await Firestore.instance
-                        .runTransaction((transaction) async {
-                      await transaction
-                          .update(_theone.reference, {'projects': aux});
-                    });
+                      dynamic aux = List<dynamic>.from(_theone['projects']);
+                      aux.add(_projectReference);
+                      await Firestore.instance
+                          .runTransaction((transaction) async {
+                        await transaction
+                            .update(_theone.reference, {'projects': aux});
+                      });
 
-                    await _attMembers();
-                    setState(() {
-                      _selectedMember = null;
-                    });
+                      await _attMembers();
+                      setState(() {
+                        _selectedMember = null;
+                      });
+                    }
                   }
                 },
               ),

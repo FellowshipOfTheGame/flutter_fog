@@ -37,17 +37,20 @@ class _AddWork extends State<AddWork> {
   ) async {
     final _user = await _auth.currentUser();
     final DocumentReference document = workedhours.document();
-    document.setData(<String, dynamic>{
-      'member': _user.uid,
-      'project': project,
-      'hours': hours,
-      'minutes': minutes,
-      'tfinished': tfinished,
-      'estimate': estimate,
-      'textra': textra,
-      'notdone': notdone,
-    });
-
+    final QuerySnapshot _projectDocument =
+        await projects.where("name", isEqualTo: _project).getDocuments();
+    if (_projectDocument.documents.length >= 0) {
+      document.setData(<String, dynamic>{
+        'member': _user.uid,
+        'project': _projectDocument.documents[0].reference,
+        'hours': hours,
+        'minutes': minutes,
+        'tfinished': tfinished,
+        'estimate': estimate,
+        'textra': textra,
+        'notdone': notdone,
+      });
+    }
     return document;
   }
 
@@ -80,7 +83,7 @@ class _AddWork extends State<AddWork> {
                 builder: (context, usnapshot) {
                   if (!usnapshot.hasData) return Container();
                   return StreamBuilder(
-                    stream: projects.snapshots(),
+                    stream: projects.orderBy('name').snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return Container();
                       List<DropdownMenuItem<String>> _items =
