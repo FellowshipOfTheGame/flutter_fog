@@ -292,7 +292,8 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
               ),
               const SizedBox(width: 8.0),
               RaisedButton(
-                child: Text('Add Member'),
+                child: Text(
+                    'Add Member'), // Change to a select member by search and return intent
                 onPressed: () async {
                   if (_selectedMember != null) {
                     QuerySnapshot _projectDocument = await projects

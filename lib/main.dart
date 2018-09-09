@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fog_members/signup.dart';
 import 'package:fog_members/tabs/events.dart';
+import 'package:fog_members/tabs/members.dart';
 import 'package:fog_members/tabs/projects.dart';
 import 'package:fog_members/tabs/worked.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -106,6 +107,9 @@ class _MyHomePageState extends State<MyHomePage> {
     Tab(
       text: "Projects",
     ),
+    Tab(
+      text: "Members",
+    ),
   ];
 
   List<Tab> _currentTabs = _userTabs;
@@ -117,6 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static List<Widget> _adminTabsContent = <Widget>[
     ProjectsWidget(),
+    MembersWidget(),
   ];
 
   List<Widget> _currentTabsContent = _userTabsContent;

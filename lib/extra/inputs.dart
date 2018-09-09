@@ -25,7 +25,6 @@ class InputDropdown extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: labelText,
-          border: OutlineInputBorder(),
         ),
         baseStyle: valueStyle,
         child: Row(
@@ -63,18 +62,18 @@ class DateTimePicker extends StatelessWidget {
   final ValueChanged<TimeOfDay> selectTime;
 
   Future<Null> _selectDate(BuildContext context) async {
-    // final DateTime picked = await showDatePicker(
-    //     context: context,
-    //     initialDate: selectedDate,
-    //     firstDate: DateTime(2015, 8),
-    //     lastDate: DateTime(2101));
-    // if (picked != null && picked != selectedDate) selectDate(picked);
+    final DateTime picked = await showDatePicker(
+        context: context,
+        initialDate: selectedDate,
+        firstDate: DateTime(2015, 8),
+        lastDate: DateTime(2101));
+    if (picked != null && picked != selectedDate) selectDate(picked);
   }
 
   Future<Null> _selectTime(BuildContext context) async {
-    // final TimeOfDay picked =
-    //     await showTimePicker(context: context, initialTime: selectedTime);
-    // if (picked != null && picked != selectedTime) selectTime(picked);
+    final TimeOfDay picked =
+        await showTimePicker(context: context, initialTime: selectedTime);
+    if (picked != null && picked != selectedTime) selectTime(picked);
   }
 
   @override
