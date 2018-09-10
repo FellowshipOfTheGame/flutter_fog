@@ -83,6 +83,7 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
                 ),
                 trailing: Icon(Icons.receipt),
                 onTap: () async {
+                  // TODO remove/edit event
                   String barcode = await QRCodeReader()
                       .setAutoFocusIntervalInMs(200)
                       .setForceAutoFocus(true)
@@ -188,7 +189,7 @@ class AttendanceWidget extends StatelessWidget {
             initIndex = snapshot.data.documents.length - 1.0;
 
           ScrollController _listController = ScrollController(
-            initialScrollOffset: initIndex * 100,
+            initialScrollOffset: initIndex * 90,
             keepScrollOffset: false,
           );
 
@@ -270,13 +271,13 @@ class _AddEvent extends State<AddEvent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Add Event"),
+        title: Text('Adicionar evento'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: <Widget>[
           DateTimePicker(
-            labelTextDate: 'From',
+            labelTextDate: 'De',
             selectedDate: _fromDate,
             selectedTime: _fromTime,
             selectDate: (DateTime date) {
@@ -310,7 +311,7 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           DateTimePicker(
-            labelTextDate: 'To',
+            labelTextDate: 'Até',
             selectedDate: _toDate,
             selectedTime: _toTime,
             selectDate: (DateTime date) {
@@ -346,12 +347,12 @@ class _AddEvent extends State<AddEvent> {
           TextField(
             controller: _nameController,
             decoration: InputDecoration(
-              labelText: 'Name',
+              labelText: 'Nome',
             ),
           ),
           const SizedBox(height: 12.0),
           SwitchListTile(
-            title: Text('Has presence'),
+            title: Text('Tem presença'),
             value: _haspresence,
             onChanged: (bool value) {
               setState(() {
@@ -361,7 +362,7 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           SwitchListTile(
-            title: Text('Mandatory'),
+            title: Text('Obrigatório'),
             value: _mandatory,
             onChanged: (bool value) {
               setState(() {
@@ -371,13 +372,14 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           RaisedButton(
-            child: Text("Add event"),
+            child: Text('Adicionar evento'),
             onPressed: () async {
               DateTime from = DateTime(_fromDate.year, _fromDate.month,
                   _fromDate.day, _fromTime.hour, _fromTime.minute);
               DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
                   _toTime.hour, _toTime.minute);
 
+              // TODO repeat event
               if (from.day == to.day &&
                   from.month == to.month &&
                   from.year == to.year) {

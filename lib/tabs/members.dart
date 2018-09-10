@@ -52,26 +52,35 @@ class ShowMemberDetails extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Card(
-              child: StreamBuilder(
-                  stream: _db
-                      .collection('presences')
-                      .where('member', isEqualTo: member.documentID)
-                      .snapshots(),
-                  builder: (pcontext, psnapshot) {
-                    if (!psnapshot.hasData) return ListTile();
-                    return FutureBuilder(
-                      future: _getMissingCount(psnapshot.data.documents),
-                      builder: (econtext, esnapshot) {
-                        if (!esnapshot.hasData) return ListTile();
-                        return ListTile(
-                          title: Text(
-                              'Mandatory events missed ${esnapshot.data[0]}'),
-                          subtitle:
-                              Text('Normal events missed ${esnapshot.data[0]}'),
-                        );
-                      },
-                    );
-                  }),
+              child: FutureBuilder(
+                future:
+                    _db.collection('members').document(member.documentID).get(),
+                builder: (ucontext, usnapshot) {
+                  if (!usnapshot.hasData) return Container();
+                  return StreamBuilder(
+                    stream: _db
+                        .collection('presences')
+                        .where('member', isEqualTo: usnapshot.data.reference)
+                        .snapshots(),
+                    builder: (pcontext, psnapshot) {
+                      if (!psnapshot.hasData) return ListTile();
+                      return FutureBuilder(
+                        future: _getMissingCount(psnapshot.data.documents),
+                        builder: (econtext, esnapshot) {
+                          if (!esnapshot.hasData) return ListTile();
+
+                          return ListTile(
+                            title: Text(
+                                'Eventos obrigatórios que faltou ${esnapshot.data[0]}'),
+                            subtitle: Text(
+                                'Eventos normais que faltou ${esnapshot.data[1]}'),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
           StreamBuilder(
@@ -85,23 +94,41 @@ class ShowMemberDetails extends StatelessWidget {
 
                 if (snapshot.data.documents.length <= 0)
                   return Center(
-                    child: Text('No activity to show'),
+                    child: Text('Nenhuma atividade para mostrar'),
                   );
 
-                List<ExpansionPanel> explist = List<ExpansionPanel>();
+                List<ExpansionTile> explist = List<ExpansionTile>();
                 for (DocumentSnapshot document in snapshot.data.documents) {
                   explist.add(
-                    ExpansionPanel(
-                      body: Text('Show info about the worked hours'),
-                      headerBuilder: (BuildContext context, bool isExpanded) {
-                        return Text('Something something worked hours');
-                      },
+                    ExpansionTile(
+                      title: FutureBuilder(
+                        future: document['project'].get(),
+                        builder: (_, psnapshot) {
+                          if (!psnapshot.hasData) return Container();
+                          return Text(
+                              'Projeto: ${psnapshot.data['name']}\tWorked: ${document['hours']}:${document['minutes']}');
+                        },
+                      ),
+                      children: <Widget>[
+                        Text(
+                            'Porcentagem da tarefa cumprida: ${document['tfinished']}%'),
+                        Text(
+                            'Estimou corretamente o tempo necessário para desenvolver a tarefa: ${document['estimate']}'),
+                        document['textra']
+                            ? Text(
+                                'Foram feitas atividades além da tarefa: Sim')
+                            : Text(
+                                'Foram feitas atividades além da tarefa: Não'),
+                        Text(
+                            'Atividades da tarefa que não foram desenvolvidas: ${document['notdone']}'),
+                        const SizedBox(height: 8.0),
+                      ],
                     ),
                   );
                 }
 
                 return Expanded(
-                  child: ExpansionPanelList(
+                  child: ListView(
                     children: explist,
                   ),
                 );
@@ -136,7 +163,7 @@ class _MembersWidgetState extends State<MembersWidget> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              labelText: 'Search Name',
+              labelText: 'Procurar nome',
             ),
             onChanged: (value) {
               setState(() {});

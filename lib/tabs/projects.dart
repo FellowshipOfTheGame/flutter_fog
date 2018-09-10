@@ -22,11 +22,13 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document,
       }
       return Card(
         child: ListTile(
+          // TODO show member info if clicked
           title: Text(document['name']),
-          subtitle: Text('Worked $work minutes'),
+          subtitle: Text('Trabalhou $work minutos'),
           trailing: FlatButton(
             shape: BeveledRectangleBorder(),
             child: Icon(
+              // TODO remove member from project
               Icons.delete,
             ),
             onPressed: () {},
@@ -72,7 +74,7 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
         context: context,
         builder: (context) {
           return SimpleDialog(
-            title: const Text('Create Project'),
+            title: const Text('Criar projeto'),
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -88,13 +90,13 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                       onPressed: () {
                         Navigator.pop(context, 0);
                       },
-                      child: const Text('Cancel'),
+                      child: const Text('Cancelar'),
                     ),
                     SimpleDialogOption(
                       onPressed: () {
                         Navigator.pop(context, 1);
                       },
-                      child: const Text('Submit'),
+                      child: const Text('Submeter'),
                     ),
                   ],
                 ),
@@ -179,7 +181,7 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                             ),
                           );
                         return DropdownButton<String>(
-                          hint: const Text('Select project'),
+                          hint: const Text('Selecionar projeto'),
                           value: _project,
                           isDense: true,
                           items: _items,
@@ -253,8 +255,8 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
                             }
                             return Card(
                               child: ListTile(
-                                title: Text('Summary'),
-                                subtitle: Text('Worked $work minutes'),
+                                title: Text('Resumo'),
+                                subtitle: Text('Trabalhou $work minutos'),
                               ),
                             );
                           },
@@ -273,11 +275,11 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
               Expanded(
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Members *',
+                    labelText: 'Membros *',
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      hint: Text('Select member'),
+                      hint: Text('Selecionar membro'),
                       value: _selectedMember,
                       isDense: true,
                       items: _notinprojectItems,
@@ -293,7 +295,7 @@ class _ProjectsWidgetState extends State<ProjectsWidget> {
               const SizedBox(width: 8.0),
               RaisedButton(
                 child: Text(
-                    'Add Member'), // Change to a select member by search and return intent
+                    'Adicionar membro'), // Change to a select member by search and return intent
                 onPressed: () async {
                   if (_selectedMember != null) {
                     QuerySnapshot _projectDocument = await projects

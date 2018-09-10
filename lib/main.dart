@@ -36,7 +36,7 @@ class GoogleButton extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 24.0, right: 8.0),
           child: Text(
-            "Sign in with Google",
+            'Sign in with Google',
             style: TextStyle(fontFamily: 'Roboto-Medium', fontSize: 14.0),
           ),
         ),
@@ -96,19 +96,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
   static List<Tab> _userTabs = <Tab>[
     Tab(
-      text: "Callendar",
+      text: 'Calendário',
     ),
     Tab(
-      text: 'Work',
+      text: 'Trabalho',
     ),
   ];
 
   static List<Tab> _adminTabs = <Tab>[
     Tab(
-      text: "Projects",
+      text: 'Projetos',
     ),
     Tab(
-      text: "Members",
+      text: 'Membros',
     ),
   ];
 
@@ -212,7 +212,8 @@ class _MyHomePageState extends State<MyHomePage> {
                               labelText: 'Email',
                             ),
                             validator: (value) {
-                              if (value.isEmpty) return 'Email is empty';
+                              if (value.isEmpty)
+                                return 'Email não pode ser vazio';
                               if (value.contains(' ') ||
                                   !value.contains(RegExp(r'^[^@]+@[^.]+\..+$')))
                                 return 'Invalid email';
@@ -222,11 +223,12 @@ class _MyHomePageState extends State<MyHomePage> {
                           TextFormField(
                             controller: _passController,
                             decoration: InputDecoration(
-                              labelText: 'Password',
+                              labelText: 'Senha',
                             ),
                             obscureText: true,
                             validator: (value) {
-                              if (value.isEmpty) return 'Password is empty';
+                              if (value.isEmpty)
+                                return 'Senha não pode ser vazia';
                             },
                           ),
                           const SizedBox(height: 16.0),
@@ -261,7 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                           Scaffold.of(lcontext)
                                               .showSnackBar(SnackBar(
                                             content:
-                                                Text('Invalid email/password'),
+                                                Text('Email ou senha inválida'),
                                           ));
                                           _passController.clear();
                                         }
@@ -355,7 +357,8 @@ class _MyHomePageState extends State<MyHomePage> {
               child: ListView(
                 children: <Widget>[
                   DrawerHeader(
-                    child: Text("Menu"),
+                    // TODO fix text color
+                    child: Text('Menu'),
                     decoration: BoxDecoration(
                       color: Color(0xFF1E2264),
                     ),
@@ -363,7 +366,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: ListTile(
-                      title: Text("Área Principal"),
+                      title: Text('Área Principal'),
                       onTap: () {
                         setState(() {
                           _currentTabsContent = _userTabsContent;
@@ -377,7 +380,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     future: getSnapshot(snapshot.data),
                     builder: (ucontext, usnapshot) {
                       if (!usnapshot.hasData) return Container();
-                      if (usnapshot.data["authority"] == 1) {
+                      if (usnapshot.data['authority'] == 1) {
                         return Padding(
                           padding: const EdgeInsets.only(
                             left: 8.0,
@@ -385,7 +388,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             bottom: 8.0,
                           ),
                           child: ListTile(
-                            title: Text("Ademir"),
+                            title: Text('Ademir'),
                             onTap: () {
                               setState(() {
                                 _currentTabsContent = _adminTabsContent;
@@ -406,7 +409,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       top: 4.0,
                     ),
                     child: ListTile(
-                      title: Text("Logout"),
+                      title: Text('Sair'),
                       onTap: () {
                         setState(() {
                           _user = _handleSignOut();

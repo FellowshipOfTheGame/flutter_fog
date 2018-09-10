@@ -51,7 +51,7 @@ class _SignUpWidget extends State<SignUpWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Sign Up"),
+        title: Text('Signup'),
       ),
       body: FutureBuilder(
         future: _sigin,
@@ -70,10 +70,10 @@ class _SignUpWidget extends State<SignUpWidget> {
                       TextFormField(
                         controller: _nameController,
                         decoration: InputDecoration(
-                          labelText: 'Name *',
+                          labelText: 'Nome *',
                         ),
                         validator: (value) {
-                          if (value.isEmpty) return 'Name is empty';
+                          if (value.isEmpty) return 'Nome não pode ser vazio';
                         },
                       ),
                       const SizedBox(height: 12.0),
@@ -84,7 +84,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                           labelText: 'Email *',
                         ),
                         validator: (value) {
-                          if (value.isEmpty) return 'Email is empty';
+                          if (value.isEmpty) return 'Email não pode ser vazio';
                           if (value.contains(' ') ||
                               !value.contains(RegExp(r'^[^@]+@[^.]+\..+$')))
                             return 'Invalid email';
@@ -94,15 +94,15 @@ class _SignUpWidget extends State<SignUpWidget> {
                       TextFormField(
                         controller: _passController,
                         decoration: InputDecoration(
-                          labelText: 'Password *',
+                          labelText: 'Senha *',
                         ),
                         validator: (value) {
-                          if (value.isEmpty) return 'Password is empty';
+                          if (value.isEmpty) return 'Senha não pode ser vazio';
                           if (value.length < 8)
-                            return 'Password needs to be at least 8 caracters long';
+                            return 'Senha precisa ter pelo menos 8 caracteres';
                           if (!value.contains(RegExp(r'[a-zA-Z]')) ||
                               !value.contains(RegExp(r'[0-9]')))
-                            return 'Password needs to contain numbers and letters';
+                            return 'Senha precisa ter números e letras';
                         },
                         obscureText: true,
                       ),
@@ -110,11 +110,11 @@ class _SignUpWidget extends State<SignUpWidget> {
                       TextFormField(
                         controller: _cpassController,
                         decoration: InputDecoration(
-                          labelText: 'Confirm Password *',
+                          labelText: 'Confirmar senha *',
                         ),
                         validator: (value) {
                           if (value != _passController.text)
-                            return 'Passwords do not match';
+                            return 'As senhas não são iguais';
                         },
                         obscureText: true,
                       ),
@@ -122,7 +122,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                   ),
                   const SizedBox(height: 16.0),
                   RaisedButton(
-                    child: Text('Confirm'),
+                    child: Text('Confirmar'),
                     onPressed: () async {
                       if (_formKey.currentState.validate() && !snapshot.data) {
                         setState(() {
@@ -145,14 +145,14 @@ class _SignUpWidget extends State<SignUpWidget> {
                               'The email address is already in use by another account.') {
                             Scaffold.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Email already in use'),
+                                content: Text('Esse email já está sendo usado'),
                               ),
                             );
                           } else {
                             print(e.message);
                             Scaffold.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Unknown error please report'),
+                                content: Text('Deu ruim reporte esse erro'),
                               ),
                             );
                           }

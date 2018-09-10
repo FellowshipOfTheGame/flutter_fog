@@ -75,7 +75,7 @@ class _AddWork extends State<AddWork> {
       children: <Widget>[
         InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Project *',
+            labelText: 'Projeto *',
           ),
           child: DropdownButtonHideUnderline(
             child: FutureBuilder(
@@ -105,7 +105,7 @@ class _AddWork extends State<AddWork> {
                           ),
                         );
                       return DropdownButton<String>(
-                        hint: Text('Select project'),
+                        hint: Text('Selecionar projeto'),
                         value: _project,
                         isDense: true,
                         items: _items,
@@ -123,7 +123,7 @@ class _AddWork extends State<AddWork> {
         const SizedBox(height: 12.0),
         InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Worked Hours *',
+            labelText: 'Horas trabalhadas na semana *',
           ),
           child: Row(
             children: <Widget>[
@@ -153,11 +153,11 @@ class _AddWork extends State<AddWork> {
           controller: _notdoneController,
           maxLines: 5,
           decoration: InputDecoration(
-            labelText: 'Work not finished',
+            labelText: 'Quais atividades da tarefa não foram desenvolvidas?',
           ),
         ),
         const SizedBox(height: 12.0),
-        Text('Finished work percentage *'),
+        Text('Porcentagem da tarefa cumprida *'),
         Row(
           children: <Widget>[
             Text('0%'),
@@ -231,16 +231,17 @@ class _AddWork extends State<AddWork> {
           ],
         ),
         const SizedBox(height: 12.0),
-        Text('Correctly estimate work time *'),
+        Text(
+            'Você estimou corretamente o tempo necessário para desenvolver a tarefa *'),
         Row(
           children: <Widget>[
             Column(
               children: <Widget>[
                 Text(
-                  'Completely',
+                  'Discordo',
                 ),
                 Text(
-                  'Disagree',
+                  'totalmente',
                 ),
               ],
             ),
@@ -291,10 +292,10 @@ class _AddWork extends State<AddWork> {
             Column(
               children: <Widget>[
                 Text(
-                  'Completely',
+                  'Concordo',
                 ),
                 Text(
-                  'Agree',
+                  'totalmente',
                 ),
               ],
             ),
@@ -302,7 +303,7 @@ class _AddWork extends State<AddWork> {
         ),
         const SizedBox(height: 12.0),
         SwitchListTile(
-          title: Text('Extra work done?'),
+          title: Text('Foram feitas atividades além da tarefa?'),
           value: _textra,
           onChanged: (bool value) {
             setState(() {
@@ -312,15 +313,17 @@ class _AddWork extends State<AddWork> {
         ),
         const SizedBox(height: 12.0),
         RaisedButton(
-          child: Text("Add event"),
+          child: Text('Adicionar evento'),
           onPressed: () async {
             if (_tfinished == null) {
               Scaffold.of(context).showSnackBar(SnackBar(
-                content: Text('Please select a finished work percentage'),
+                content: Text(
+                    'Por favor selecione uma porcentagem da tarefa cumprida'),
               ));
             } else if (_estimate == null) {
               Scaffold.of(context).showSnackBar(SnackBar(
-                content: Text('Please select a estimate work time'),
+                content: Text(
+                    'Por favor selecione uma estimativa correta de tempo necessário'),
               ));
             } else {
               int _hours = _hoursController.text.isEmpty
