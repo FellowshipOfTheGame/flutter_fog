@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fog_members/extra/inputs.dart';
-import 'package:qr_reader/qr_reader.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
 final Firestore _db = Firestore.instance;
@@ -43,6 +42,99 @@ String formatTime(DateTime from, DateTime to) {
   return "$_fromh:$_fromm - $_toh:$_tom";
 }
 
+// class EditEvent extends StatelessWidget {
+//   const EditEvent(this.event, {Key key}) : super(key: key);
+
+//   final DocumentSnapshot event;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//         appBar: AppBar(),
+//         body: ListView(
+//           children: <Widget>[
+//         TextField(),
+//           ],
+//         ));
+//   }
+// }
+
+Future<Null> _eventDialog(BuildContext context, DocumentSnapshot document,
+    DocumentSnapshot presence) async {
+  if (presence != null) {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          children: <Widget>[
+            FlatButton(
+              child: const Text('QR'),
+              onPressed: () async {
+                await readQR(document, presence);
+                Navigator.pop(context);
+              },
+            ),
+            // FlatButton(
+            //   child: const Text('Editar'),
+            //   onPressed: () {},
+            // ),
+            FlatButton(
+              child: const Text('Remover'),
+              onPressed: () async {
+                QuerySnapshot presences =
+                    await _db.collection('presences').getDocuments();
+                for (DocumentSnapshot pr in presences.documents) {
+                  if (pr['event'] == document.reference) {
+                    Firestore.instance.runTransaction((transaction) async {
+                      await transaction.delete(pr.reference);
+                    });
+                  }
+                }
+                Firestore.instance.runTransaction((transaction) async {
+                  await transaction.delete(document.reference);
+                });
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  } else {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          children: <Widget>[
+            // FlatButton(
+            //   child: const Text('Editar'),
+            //   onPressed: () {},
+            // ),
+            FlatButton(
+              child: const Text('Remover'),
+              onPressed: () async {
+                QuerySnapshot presences =
+                    await _db.collection('presences').getDocuments();
+                for (DocumentSnapshot pr in presences.documents) {
+                  if (pr['event'] == document.reference) {
+                    Firestore.instance.runTransaction((transaction) async {
+                      await transaction.delete(pr.reference);
+                    });
+                  }
+                }
+                Firestore.instance.runTransaction((transaction) async {
+                  await transaction.delete(document.reference);
+                });
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 Widget _eventCard(BuildContext context, DocumentSnapshot document) {
   if (!document['haspresence']) {
     return Card(
@@ -51,6 +143,15 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
         subtitle: Text(
           formatTime(document['from'], document['to']),
         ),
+        onTap: () async {
+          FirebaseUser _user = await _auth.currentUser();
+          DocumentReference _ref =
+              _db.collection("members").document(_user.uid);
+          DocumentSnapshot member = await _ref.get();
+          if (member['authority'] == 1) {
+            await _eventDialog(context, document, null);
+          }
+        },
       ),
     );
   } else {
@@ -73,6 +174,12 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
                 child: ListTile(
                   title: Text(document['name']),
                   subtitle: Text(formatTime(document['from'], document['to'])),
+                  onTap: () async {
+                    DocumentSnapshot member = await _ref.get();
+                    if (member['authority'] == 1) {
+                      await _eventDialog(pcontext, document, null);
+                    }
+                  },
                 ),
               );
             return Card(
@@ -83,23 +190,12 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
                 ),
                 trailing: Icon(Icons.receipt),
                 onTap: () async {
-                  // TODO remove/edit event
-                  String barcode = await QRCodeReader()
-                      .setAutoFocusIntervalInMs(200)
-                      .setForceAutoFocus(true)
-                      .setTorchEnabled(true)
-                      .setHandlePermissions(true)
-                      .setExecuteAfterPermissionGranted(true)
-                      .scan();
-                  if (barcode == document.documentID &&
-                      (psnapshot.data.documents[0]['went'] == null ||
-                          !psnapshot.data.documents[0]['went'])) {
-                    Firestore.instance.runTransaction((transaction) async {
-                      DocumentSnapshot meeting =
-                          await transaction.get(psnapshot.data.reference);
-                      await transaction
-                          .update(meeting.reference, {'went': true});
-                    });
+                  DocumentSnapshot member = await _ref.get();
+                  if (member['authority'] == 1) {
+                    await _eventDialog(
+                        pcontext, document, psnapshot.data.documents[0]);
+                  } else {
+                    await readQR(document, psnapshot.data.documents[0]);
                   }
                 },
               ),
@@ -222,6 +318,7 @@ class _AddEvent extends State<AddEvent> {
   bool _haspresence = false;
   bool _mandatory = false;
   final _nameController = TextEditingController();
+  final _timesController = TextEditingController(text: '1');
   CollectionReference get events => _db.collection('events');
   CollectionReference get members => _db.collection('members');
   CollectionReference get presences => _db.collection('presences');
@@ -264,6 +361,7 @@ class _AddEvent extends State<AddEvent> {
   @override
   void dispose() {
     _nameController.dispose();
+    _timesController.dispose();
     super.dispose();
   }
 
@@ -351,6 +449,14 @@ class _AddEvent extends State<AddEvent> {
             ),
           ),
           const SizedBox(height: 12.0),
+          TextField(
+            controller: _timesController,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Repete quantas semanas',
+            ),
+          ),
+          const SizedBox(height: 12.0),
           SwitchListTile(
             title: Text('Tem presença'),
             value: _haspresence,
@@ -379,59 +485,66 @@ class _AddEvent extends State<AddEvent> {
               DateTime to = DateTime(_toDate.year, _toDate.month, _toDate.day,
                   _toTime.hour, _toTime.minute);
 
-              // TODO repeat event
-              if (from.day == to.day &&
-                  from.month == to.month &&
-                  from.year == to.year) {
-                DocumentReference _event = await _addEvent(
-                  from,
-                  to,
-                  _nameController.text,
-                  _haspresence,
-                  _mandatory,
-                );
+              for (int times = 0;
+                  times < int.parse(_timesController.text);
+                  times++) {
+                if (from.day == to.day &&
+                    from.month == to.month &&
+                    from.year == to.year) {
+                  DocumentReference _event = await _addEvent(
+                    from,
+                    to,
+                    _nameController.text,
+                    _haspresence,
+                    _mandatory,
+                  );
 
-                if (_haspresence) _addPresences(_event);
-              } else {
-                DocumentReference _event = await _addEvent(
-                  from,
-                  DateTime(_fromDate.year, _fromDate.month, _fromDate.day, 23,
-                      59, 59),
-                  _nameController.text,
-                  _haspresence,
-                  _mandatory,
-                );
+                  if (_haspresence) _addPresences(_event);
+                } else {
+                  DocumentReference _event = await _addEvent(
+                    from,
+                    DateTime(_fromDate.year, _fromDate.month, _fromDate.day, 23,
+                        59, 59),
+                    _nameController.text,
+                    _haspresence,
+                    _mandatory,
+                  );
 
-                if (_haspresence) _addPresences(_event);
+                  if (_haspresence) _addPresences(_event);
 
-                for (var i = from.year; i <= to.year; i++) {
-                  for (var j = from.month; j <= to.month; j++) {
-                    for (var k = from.day + 1; k < to.day; k++) {
-                      _event = await _addEvent(
-                        DateTime(i, j, k, 0, 0),
-                        DateTime(i, j, k, 23, 59, 59),
-                        _nameController.text,
-                        _haspresence,
-                        _mandatory,
-                      );
+                  for (var i = from.year; i <= to.year; i++) {
+                    for (var j = from.month; j <= to.month; j++) {
+                      for (var k = from.day + 1; k < to.day; k++) {
+                        _event = await _addEvent(
+                          DateTime(i, j, k, 0, 0),
+                          DateTime(i, j, k, 23, 59, 59),
+                          _nameController.text,
+                          _haspresence,
+                          _mandatory,
+                        );
 
-                      if (_haspresence) _addPresences(_event);
+                        if (_haspresence) _addPresences(_event);
+                      }
                     }
                   }
+
+                  _event = await _addEvent(
+                    DateTime(_toDate.year, _toDate.month, _toDate.day, 0, 0),
+                    to,
+                    _nameController.text,
+                    _haspresence,
+                    _mandatory,
+                  );
+
+                  if (_haspresence) _addPresences(_event);
                 }
 
-                _event = await _addEvent(
-                  DateTime(_toDate.year, _toDate.month, _toDate.day, 0, 0),
-                  to,
-                  _nameController.text,
-                  _haspresence,
-                  _mandatory,
-                );
-
-                if (_haspresence) _addPresences(_event);
+                from = from.add(Duration(days: 7));
+                to = to.add(Duration(days: 7));
               }
 
               _nameController.clear();
+              _timesController.clear();
               _mandatory = false;
               setState(() {
                 _haspresence = false;

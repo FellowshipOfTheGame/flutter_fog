@@ -105,15 +105,20 @@ class ShowMemberDetails extends StatelessWidget {
                         future: document['project'].get(),
                         builder: (_, psnapshot) {
                           if (!psnapshot.hasData) return Container();
-                          return Text(
-                              'Projeto: ${psnapshot.data['name']}\tWorked: ${document['hours']}:${document['minutes']}');
+                          return Column(
+                            children: <Widget>[
+                              Text('Projeto: ${psnapshot.data['name']}'),
+                              Text(
+                                  'Trabalhou: ${document['hours']}:${document['minutes']}'),
+                            ],
+                          );
                         },
                       ),
                       children: <Widget>[
                         Text(
                             'Porcentagem da tarefa cumprida: ${document['tfinished']}%'),
                         Text(
-                            'Estimou corretamente o tempo necessário para desenvolver a tarefa: ${document['estimate']}'),
+                            'Estimo de tempo necessário para desenvolver a tarefa: ${document['estimate']}'),
                         document['textra']
                             ? Text(
                                 'Foram feitas atividades além da tarefa: Sim')

@@ -357,8 +357,13 @@ class _MyHomePageState extends State<MyHomePage> {
               child: ListView(
                 children: <Widget>[
                   DrawerHeader(
-                    // TODO fix text color
-                    child: Text('Menu'),
+                    child: Align(
+                      alignment: AlignmentDirectional.bottomEnd,
+                      child: Text(
+                        'Imagine aqui um logo bonito',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                     decoration: BoxDecoration(
                       color: Color(0xFF1E2264),
                     ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:fog_members/tabs/members.dart';
 
 final Firestore _db = Firestore.instance;
 
@@ -10,8 +11,8 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document,
   return StreamBuilder(
     stream: _db
         .collection('workedhours')
-        .where("member", isEqualTo: document.documentID)
-        .where("project", isEqualTo: project)
+        .where('member', isEqualTo: document.documentID)
+        .where('project', isEqualTo: project)
         .snapshots(),
     builder: (wcontext, wsnapshot) {
       if (!wsnapshot.hasData) return Container();
@@ -22,17 +23,24 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document,
       }
       return Card(
         child: ListTile(
-          // TODO show member info if clicked
           title: Text(document['name']),
           subtitle: Text('Trabalhou $work minutos'),
           trailing: FlatButton(
             shape: BeveledRectangleBorder(),
-            child: Icon(
-              // TODO remove member from project
-              Icons.delete,
-            ),
-            onPressed: () {},
+            child: Icon(Icons.delete),
+            onPressed: () {
+              dynamic projects = List<dynamic>.from(document['projects']);
+              projects.remove(project);
+              Firestore.instance.runTransaction((transaction) async {
+                await transaction
+                    .update(document.reference, {'projects': projects});
+              });
+            },
           ),
+          onTap: () async {
+            await Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => ShowMemberDetails(document)));
+          },
         ),
       );
     },
