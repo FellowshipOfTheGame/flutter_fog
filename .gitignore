@@ -10,3 +10,4 @@ build/
 .vscode
 .idea
 android/app/google-services.json
+android/key.properties
