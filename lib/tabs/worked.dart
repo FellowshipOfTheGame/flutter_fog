@@ -105,7 +105,7 @@ class _AddWork extends State<AddWork> {
                           ),
                         );
                       return DropdownButton<String>(
-                        hint: Text('Selecionar projeto'),
+                        hint: const Text('Selecionar projeto'),
                         value: _project,
                         isDense: true,
                         items: _items,
@@ -135,7 +135,7 @@ class _AddWork extends State<AddWork> {
                 ),
               ),
               const SizedBox(width: 12.0),
-              Text(':'),
+              const Text(':'),
               const SizedBox(width: 12.0),
               Flexible(
                 child: TextField(
@@ -153,14 +153,14 @@ class _AddWork extends State<AddWork> {
           controller: _notdoneController,
           maxLines: 5,
           decoration: InputDecoration(
-            labelText: 'Quais atividades da tarefa não foram desenvolvidas?',
+            labelText: 'Atividades da tarefa não desenvolvidas?',
           ),
         ),
         const SizedBox(height: 12.0),
-        Text('Porcentagem da tarefa cumprida *'),
+        const Text('Porcentagem da tarefa cumprida *'),
         Row(
           children: <Widget>[
-            Text('0%'),
+            const Text('0%'),
             Flexible(
               child: RadioListTile(
                 groupValue: 0,
@@ -227,20 +227,20 @@ class _AddWork extends State<AddWork> {
                 value: _tfinished,
               ),
             ),
-            Text('100%'),
+            const Text('100%'),
           ],
         ),
         const SizedBox(height: 12.0),
-        Text(
+        const Text(
             'Você estimou corretamente o tempo necessário para desenvolver a tarefa *'),
         Row(
           children: <Widget>[
             Column(
               children: <Widget>[
-                Text(
+                const Text(
                   'Discordo',
                 ),
-                Text(
+                const Text(
                   'totalmente',
                 ),
               ],
@@ -291,10 +291,10 @@ class _AddWork extends State<AddWork> {
             ),
             Column(
               children: <Widget>[
-                Text(
+                const Text(
                   'Concordo',
                 ),
-                Text(
+                const Text(
                   'totalmente',
                 ),
               ],
@@ -303,7 +303,7 @@ class _AddWork extends State<AddWork> {
         ),
         const SizedBox(height: 12.0),
         SwitchListTile(
-          title: Text('Foram feitas atividades além da tarefa?'),
+          title: const Text('Foram feitas atividades além da tarefa?'),
           value: _textra,
           onChanged: (bool value) {
             setState(() {
@@ -313,46 +313,53 @@ class _AddWork extends State<AddWork> {
         ),
         const SizedBox(height: 12.0),
         RaisedButton(
-          child: Text('Adicionar evento'),
-          onPressed: () async {
-            if (_tfinished == null) {
-              Scaffold.of(context).showSnackBar(SnackBar(
-                content: Text(
-                    'Por favor selecione uma porcentagem da tarefa cumprida'),
-              ));
-            } else if (_estimate == null) {
-              Scaffold.of(context).showSnackBar(SnackBar(
-                content: Text(
-                    'Por favor selecione uma estimativa correta de tempo necessário'),
-              ));
-            } else {
-              int _hours = _hoursController.text.isEmpty
-                      ? 0
-                      : int.parse(_hoursController.text),
-                  _minutes = _minutesController.text.isEmpty
-                      ? 0
-                      : int.parse(_minutesController.text);
+          child: const Text('Enviar formulário'),
+          onPressed: _project == null
+              ? null
+              : () async {
+                  if (_tfinished == null) {
+                    Scaffold.of(context).showSnackBar(SnackBar(
+                      content: const Text(
+                          'Por favor selecione uma porcentagem da tarefa cumprida'),
+                    ));
+                  } else if (_estimate == null) {
+                    Scaffold.of(context).showSnackBar(SnackBar(
+                      content: const Text(
+                          'Por favor selecione uma estimativa correta de tempo necessário'),
+                    ));
+                  } else {
+                    int _hours = _hoursController.text.isEmpty
+                            ? 0
+                            : int.parse(_hoursController.text),
+                        _minutes = _minutesController.text.isEmpty
+                            ? 0
+                            : int.parse(_minutesController.text);
 
-              _addWorkedHours(
-                _project,
-                _hours,
-                _minutes,
-                _tfinished,
-                _estimate,
-                _textra,
-                _notdoneController.text,
-              );
+                    _addWorkedHours(
+                      _project,
+                      _hours,
+                      _minutes,
+                      _tfinished,
+                      _estimate,
+                      _textra,
+                      _notdoneController.text,
+                    );
 
-              _hoursController.text = '0';
-              _minutesController.text = '0';
-              _notdoneController.clear();
-              _tfinished = null;
-              _estimate = null;
-              setState(() {
-                _textra = false;
-              });
-            }
-          },
+                    Scaffold.of(context).showSnackBar(SnackBar(
+                      content: const Text(
+                          'Formulário de horas trabalhadas enviada com sucesso'),
+                    ));
+
+                    _hoursController.text = '0';
+                    _minutesController.text = '0';
+                    _notdoneController.clear();
+                    _tfinished = null;
+                    _estimate = null;
+                    setState(() {
+                      _textra = false;
+                    });
+                  }
+                },
         ),
       ],
     );

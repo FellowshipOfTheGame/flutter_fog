@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_reader/qr_reader.dart';
 
-Future<Null> readQR(
+Future<bool> readQR(
     DocumentSnapshot document, DocumentSnapshot presence) async {
   String barcode = await QRCodeReader()
       .setAutoFocusIntervalInMs(200)
@@ -18,7 +18,9 @@ Future<Null> readQR(
     Firestore.instance.runTransaction((transaction) async {
       await transaction.update(presence.reference, {'went': true});
     });
+    return true;
   }
+  return false;
 }
 
 class InputDropdown extends StatelessWidget {

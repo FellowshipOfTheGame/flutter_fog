@@ -3,9 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QRGenerator extends StatelessWidget {
-  QRGenerator({
-    @required this.document,
-  });
+  const QRGenerator(this.document, {Key key}) : super(key: key);
 
   final DocumentSnapshot document;
 

@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fog_members/signup.dart';
+import 'package:fog_members/tabs/acceptmember.dart';
 import 'package:fog_members/tabs/events.dart';
+import 'package:fog_members/tabs/justify.dart';
 import 'package:fog_members/tabs/members.dart';
 import 'package:fog_members/tabs/projects.dart';
 import 'package:fog_members/tabs/worked.dart';
@@ -35,7 +37,7 @@ class GoogleButton extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(left: 24.0, right: 8.0),
-          child: Text(
+          child: const Text(
             'Sign in with Google',
             style: TextStyle(fontFamily: 'Roboto-Medium', fontSize: 14.0),
           ),
@@ -71,6 +73,9 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(0.0)),
           ),
         ),
+        textTheme: TextTheme(
+          body1: TextStyle(fontSize: 18.0),
+        ),
       ),
       home: MyHomePage(title: 'FoG'),
     );
@@ -92,7 +97,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final _passController = TextEditingController();
   Future<FirebaseUser> _user = _auth.currentUser();
   Future<bool> _loading = Future.value(false);
+  CollectionReference get events => _db.collection('events');
   CollectionReference get members => _db.collection('members');
+  CollectionReference get presences => _db.collection('presences');
 
   static List<Tab> _userTabs = <Tab>[
     Tab(
@@ -100,6 +107,9 @@ class _MyHomePageState extends State<MyHomePage> {
     ),
     Tab(
       text: 'Trabalho',
+    ),
+    Tab(
+      text: 'Sala',
     ),
   ];
 
@@ -110,6 +120,9 @@ class _MyHomePageState extends State<MyHomePage> {
     Tab(
       text: 'Membros',
     ),
+    Tab(
+      text: 'Justificativas',
+    ),
   ];
 
   List<Tab> _currentTabs = _userTabs;
@@ -117,11 +130,16 @@ class _MyHomePageState extends State<MyHomePage> {
   static List<Widget> _userTabsContent = <Widget>[
     AttendanceWidget(),
     AddWork(),
+    const Text(
+      'Não está pronto',
+      textAlign: TextAlign.center,
+    ),
   ];
 
   static List<Widget> _adminTabsContent = <Widget>[
     ProjectsWidget(),
     MembersWidget(),
+    JustifyWidget(),
   ];
 
   List<Widget> _currentTabsContent = _userTabsContent;
@@ -166,13 +184,31 @@ class _MyHomePageState extends State<MyHomePage> {
     return document;
   }
 
+  Future<Null> _addPresence(
+      DocumentReference event, DocumentReference member, bool went) async {
+    final DocumentReference document = presences.document();
+    document.setData(<String, dynamic>{
+      'event': event,
+      'member': member,
+      'went': went,
+    });
+  }
+
   Future<Null> _addMember(FirebaseUser user) async {
     final DocumentReference document = members.document(user.uid);
     document.setData(<String, dynamic>{
       'name': user.displayName,
-      'authority': 0,
+      'email': user.email,
+      'authority': -1,
       'projects': [],
     });
+
+    QuerySnapshot query = await events.getDocuments();
+    for (DocumentSnapshot event in query.documents) {
+      if (event['to'].isAfter(DateTime.now())) {
+        _addPresence(event.reference, document, false);
+      }
+    }
   }
 
   @override
@@ -237,7 +273,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             children: <Widget>[
                               Expanded(
                                 child: RaisedButton(
-                                  child: Text('Login'),
+                                  child: const Text('Login'),
                                   onPressed: () async {
                                     if (_formKey.currentState.validate() &&
                                         !lsnapshot.data) {
@@ -262,8 +298,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                                 'The password is invalid or the user does not have a password.') {
                                           Scaffold.of(lcontext)
                                               .showSnackBar(SnackBar(
-                                            content:
-                                                Text('Email ou senha inválida'),
+                                            content: const Text(
+                                                'Email ou senha inválida'),
                                           ));
                                           _passController.clear();
                                         }
@@ -279,7 +315,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               const SizedBox(width: 12.0),
                               Expanded(
                                 child: RaisedButton(
-                                  child: Text('Signup'),
+                                  child: const Text('Signup'),
                                   onPressed: () async {
                                     if (!lsnapshot.data) {
                                       _passController.clear();
@@ -290,6 +326,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                               MaterialPageRoute<FirebaseUser>(
                                                   builder: (context) =>
                                                       SignUpWidget()));
+
                                       setState(() {
                                         _user = Future.value(_user2);
                                       });
@@ -341,92 +378,154 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           );
-        return DefaultTabController(
-          length: _currentTabs.length,
-          child: Scaffold(
-            appBar: AppBar(
-              bottom: TabBar(
-                tabs: _currentTabs,
-              ),
-              title: Text(widget.title),
-            ),
-            body: TabBarView(
-              children: _currentTabsContent,
-            ),
-            drawer: Drawer(
-              child: ListView(
-                children: <Widget>[
-                  DrawerHeader(
-                    child: Align(
-                      alignment: AlignmentDirectional.bottomEnd,
-                      child: Text(
-                        'Imagine aqui um logo bonito',
-                        style: TextStyle(color: Colors.white),
+        // if (!snapshot.data.isEmailVerified) {
+        //   return Scaffold(
+        //     appBar: AppBar(
+        //       title: Text(widget.title),
+        //     ),
+        //     body: Column(
+        //       mainAxisAlignment: MainAxisAlignment.center,
+        //       crossAxisAlignment: CrossAxisAlignment.stretch,
+        //       children: <Widget>[
+        //         Text(
+        //           'Email não verificado',
+        //           textAlign: TextAlign.center,
+        //         ),
+        //         Padding(
+        //           padding: const EdgeInsets.all(8.0),
+        //           child: RaisedButton(
+        //             child: const Text('Sair'),
+        //             onPressed: () {
+        //               setState(() {
+        //                 _user = _handleSignOut();
+        //               });
+        //               Navigator.pop(context);
+        //             },
+        //           ),
+        //         ),
+        //       ],
+        //     ),
+        //   );
+        // }
+        return FutureBuilder(
+          future: getSnapshot(snapshot.data),
+          builder: (ucontext, usnapshot) {
+            if (!usnapshot.hasData) return Container();
+            if (usnapshot.data['authority'] < 0)
+              return Scaffold(
+                  appBar: AppBar(
+                    title: Text(widget.title),
+                  ),
+                  body: Center(child: Text('Conta pendente a ser aceita')));
+            return DefaultTabController(
+              length: _currentTabs.length,
+              child: Scaffold(
+                appBar: AppBar(
+                  bottom: TabBar(
+                    tabs: _currentTabs,
+                  ),
+                  title: Text(widget.title),
+                ),
+                body: TabBarView(
+                  children: _currentTabsContent,
+                ),
+                drawer: Drawer(
+                  child: ListView(
+                    children: <Widget>[
+                      DrawerHeader(
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Image.asset(
+                            'assets/icon/icon-drawer.png',
+                          ),
+                        ),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF1E2264),
+                        ),
                       ),
-                    ),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF1E2264),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ListTile(
+                          title: const Text('Área Principal'),
+                          onTap: () {
+                            _currentTabsContent = _userTabsContent;
+                            setState(() {
+                              _currentTabs = _userTabs;
+                            });
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                      Builder(
+                        builder: (context) {
+                          if (usnapshot.data['authority'] == 1) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                left: 8.0,
+                                right: 8.0,
+                                bottom: 8.0,
+                              ),
+                              child: ListTile(
+                                title: const Text('Ademir'),
+                                onTap: () {
+                                  _currentTabsContent = _adminTabsContent;
+                                  setState(() {
+                                    _currentTabs = _adminTabs;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            );
+                          }
+                          return Container();
+                        },
+                      ),
+                      Builder(
+                        builder: (context) {
+                          if (usnapshot.data['authority'] == 1) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                left: 8.0,
+                                right: 8.0,
+                                bottom: 8.0,
+                              ),
+                              child: ListTile(
+                                title: const Text('Aceitar membros'),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              AcceptMember()));
+                                },
+                              ),
+                            );
+                          }
+                          return Container();
+                        },
+                      ),
+                      Divider(),
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 8.0,
+                          right: 8.0,
+                        ),
+                        child: ListTile(
+                          title: const Text('Sair'),
+                          onTap: () {
+                            setState(() {
+                              _user = _handleSignOut();
+                            });
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ListTile(
-                      title: Text('Área Principal'),
-                      onTap: () {
-                        setState(() {
-                          _currentTabsContent = _userTabsContent;
-                          _currentTabs = _userTabs;
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-                  FutureBuilder(
-                    future: getSnapshot(snapshot.data),
-                    builder: (ucontext, usnapshot) {
-                      if (!usnapshot.hasData) return Container();
-                      if (usnapshot.data['authority'] == 1) {
-                        return Padding(
-                          padding: const EdgeInsets.only(
-                            left: 8.0,
-                            right: 8.0,
-                            bottom: 8.0,
-                          ),
-                          child: ListTile(
-                            title: Text('Ademir'),
-                            onTap: () {
-                              setState(() {
-                                _currentTabsContent = _adminTabsContent;
-                                _currentTabs = _adminTabs;
-                              });
-                              Navigator.pop(context);
-                            },
-                          ),
-                        );
-                      }
-                      return Container();
-                    },
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 8.0,
-                      right: 8.0,
-                      top: 4.0,
-                    ),
-                    child: ListTile(
-                      title: Text('Sair'),
-                      onTap: () {
-                        setState(() {
-                          _user = _handleSignOut();
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

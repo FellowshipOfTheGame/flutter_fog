@@ -9,5 +9,7 @@ build/
 .flutter-plugins
 .vscode
 .idea
+android/app/google-services-release.json
+android/app/google-services-debug.json
 android/app/google-services.json
 android/key.properties

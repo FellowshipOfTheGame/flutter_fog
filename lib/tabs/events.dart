@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fog_members/extra/inputs.dart';
+import 'package:fog_members/tabs/qrgenerator.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
 final Firestore _db = Firestore.instance;
@@ -42,169 +43,23 @@ String formatTime(DateTime from, DateTime to) {
   return "$_fromh:$_fromm - $_toh:$_tom";
 }
 
-// class EditEvent extends StatelessWidget {
-//   const EditEvent(this.event, {Key key}) : super(key: key);
-
-//   final DocumentSnapshot event;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//         appBar: AppBar(),
-//         body: ListView(
-//           children: <Widget>[
-//         TextField(),
-//           ],
-//         ));
-//   }
-// }
-
-Future<Null> _eventDialog(BuildContext context, DocumentSnapshot document,
-    DocumentSnapshot presence) async {
-  if (presence != null) {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return SimpleDialog(
-          children: <Widget>[
-            FlatButton(
-              child: const Text('QR'),
-              onPressed: () async {
-                await readQR(document, presence);
-                Navigator.pop(context);
-              },
-            ),
-            // FlatButton(
-            //   child: const Text('Editar'),
-            //   onPressed: () {},
-            // ),
-            FlatButton(
-              child: const Text('Remover'),
-              onPressed: () async {
-                QuerySnapshot presences =
-                    await _db.collection('presences').getDocuments();
-                for (DocumentSnapshot pr in presences.documents) {
-                  if (pr['event'] == document.reference) {
-                    Firestore.instance.runTransaction((transaction) async {
-                      await transaction.delete(pr.reference);
-                    });
-                  }
-                }
-                Firestore.instance.runTransaction((transaction) async {
-                  await transaction.delete(document.reference);
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  } else {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return SimpleDialog(
-          children: <Widget>[
-            // FlatButton(
-            //   child: const Text('Editar'),
-            //   onPressed: () {},
-            // ),
-            FlatButton(
-              child: const Text('Remover'),
-              onPressed: () async {
-                QuerySnapshot presences =
-                    await _db.collection('presences').getDocuments();
-                for (DocumentSnapshot pr in presences.documents) {
-                  if (pr['event'] == document.reference) {
-                    Firestore.instance.runTransaction((transaction) async {
-                      await transaction.delete(pr.reference);
-                    });
-                  }
-                }
-                Firestore.instance.runTransaction((transaction) async {
-                  await transaction.delete(document.reference);
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 Widget _eventCard(BuildContext context, DocumentSnapshot document) {
-  if (!document['haspresence']) {
-    return Card(
-      child: ListTile(
-        title: Text(document['name']),
-        subtitle: Text(
-          formatTime(document['from'], document['to']),
-        ),
-        onTap: () async {
-          FirebaseUser _user = await _auth.currentUser();
-          DocumentReference _ref =
-              _db.collection("members").document(_user.uid);
-          DocumentSnapshot member = await _ref.get();
-          if (member['authority'] == 1) {
-            await _eventDialog(context, document, null);
-          }
-        },
+  return Card(
+    color: document['mandatory'] ? Colors.red : Colors.white,
+    child: ListTile(
+      title: Text(document['name']),
+      subtitle: Text(
+        formatTime(document['from'], document['to']),
       ),
-    );
-  } else {
-    return FutureBuilder(
-      future: _auth.currentUser(),
-      builder: (ucontext, usnapshot) {
-        if (!usnapshot.hasData) return Container();
-        DocumentReference _ref =
-            _db.collection("members").document(usnapshot.data.uid);
-        return StreamBuilder(
-          stream: _db
-              .collection("presences")
-              .where("event", isEqualTo: document.reference)
-              .where("member", isEqualTo: _ref)
-              .snapshots(),
-          builder: (pcontext, psnapshot) {
-            if (!psnapshot.hasData) return Container();
-            if (psnapshot.data.documents.length == 0)
-              return Card(
-                child: ListTile(
-                  title: Text(document['name']),
-                  subtitle: Text(formatTime(document['from'], document['to'])),
-                  onTap: () async {
-                    DocumentSnapshot member = await _ref.get();
-                    if (member['authority'] == 1) {
-                      await _eventDialog(pcontext, document, null);
-                    }
-                  },
-                ),
-              );
-            return Card(
-              child: ListTile(
-                title: Text(document['name']),
-                subtitle: Text(
-                  formatTime(document['from'], document['to']),
-                ),
-                trailing: Icon(Icons.receipt),
-                onTap: () async {
-                  DocumentSnapshot member = await _ref.get();
-                  if (member['authority'] == 1) {
-                    await _eventDialog(
-                        pcontext, document, psnapshot.data.documents[0]);
-                  } else {
-                    await readQR(document, psnapshot.data.documents[0]);
-                  }
-                },
-              ),
-            );
-          },
-        );
+      onTap: () async {
+        FirebaseUser _user = await _auth.currentUser();
+        DocumentReference _ref = _db.collection("members").document(_user.uid);
+        DocumentSnapshot member = await _ref.get();
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => ShowEventDetails(document, member)));
       },
-    );
-  }
+    ),
+  );
 }
 
 Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
@@ -231,6 +86,293 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
       Expanded(flex: 5, child: _eventCard(context, document))
     ],
   );
+}
+
+class ShowEventDetails extends StatefulWidget {
+  const ShowEventDetails(this.event, this.member, {Key key}) : super(key: key);
+
+  final DocumentSnapshot event;
+  final DocumentSnapshot member;
+
+  @override
+  _ShowEventDetailsState createState() => _ShowEventDetailsState();
+}
+
+class _ShowEventDetailsState extends State<ShowEventDetails> {
+  bool _just = false;
+
+  Future<Null> _addJustify(
+    DocumentReference presence,
+    String reason,
+  ) async {
+    final DocumentReference document = _db.collection('justifies').document();
+    await document.setData(<String, dynamic>{
+      'presence': presence,
+      'reason': reason,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.event['name']),
+      ),
+      body: FutureBuilder(
+        future: _db
+            .collection('presences')
+            .where('event', isEqualTo: widget.event.reference)
+            .where('member', isEqualTo: widget.member.reference)
+            .getDocuments(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
+          return Column(
+            children: <Widget>[
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: <Widget>[
+                    Text('De: ${widget.event['from']}'),
+                    const SizedBox(height: 4.0),
+                    Text('Até: ${widget.event['to']}'),
+                    Divider(),
+                    Text(
+                      'Descrição: ${widget.event['description']}',
+                      overflow: TextOverflow.clip,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0, left: 16.0),
+                child: RaisedButton(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Container(
+                        child: Image.asset(
+                          'assets/qr-code.png',
+                          color: (snapshot.data.documents.length <= 0 ||
+                                  snapshot.data.documents[0]['went'] ||
+                                  _just)
+                              ? Colors.grey
+                              : Colors.black,
+                        ),
+                        width: 18.0,
+                        height: 18.0,
+                      ),
+                      const SizedBox(width: 12.0),
+                      const Text('Ler QR'),
+                    ],
+                  ),
+                  onPressed: (snapshot.data.documents.length <= 0 ||
+                          snapshot.data.documents[0]['went'] ||
+                          _just)
+                      ? null
+                      : () async {
+                          if (await readQR(
+                                  widget.event, snapshot.data.documents[0]) ==
+                              true) {
+                            Scaffold.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Presença adicionada'),
+                              ),
+                            );
+
+                            setState(() {});
+                          }
+                        },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0, left: 16.0),
+                child: RaisedButton(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Icon(Icons.subject),
+                      const SizedBox(width: 12.0),
+                      const Text('Justificar falta'),
+                    ],
+                  ),
+                  onPressed: (snapshot.data.documents.length <= 0 ||
+                          snapshot.data.documents[0]['went'] ||
+                          _just)
+                      ? null
+                      : () async {
+                          final _reasonController = TextEditingController();
+
+                          switch (await showDialog(
+                            context: context,
+                            builder: (context) {
+                              return SimpleDialog(
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Center(
+                                      child: TextField(
+                                        keyboardType: TextInputType.multiline,
+                                        controller: _reasonController,
+                                        maxLines: 5,
+                                        decoration: InputDecoration(
+                                          labelText: 'Razão',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  ButtonTheme.bar(
+                                    child: ButtonBar(
+                                      children: <Widget>[
+                                        SimpleDialogOption(
+                                          onPressed: () {
+                                            Navigator.pop(context, 0);
+                                          },
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        SimpleDialogOption(
+                                          onPressed: () {
+                                            Navigator.pop(context, 1);
+                                          },
+                                          child: const Text('Enviar'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )) {
+                            case 1:
+                              await _addJustify(
+                                  snapshot.data.documents[0].reference,
+                                  _reasonController.text);
+                              Scaffold.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      const Text('Justificativa adicionada'),
+                                ),
+                              );
+
+                              setState(() {
+                                _just = true;
+                              });
+                              break;
+                            default:
+                              break;
+                          }
+                        },
+                ),
+              ),
+              Builder(
+                builder: (context) {
+                  if (widget.member['authority'] == 1) {
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                          right: 16.0, left: 16.0, bottom: 8.0),
+                      child: RaisedButton(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Icon(Icons.add),
+                            const SizedBox(width: 12.0),
+                            const Text('Gerar QR'),
+                          ],
+                        ),
+                        onPressed: () async {
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => QRGenerator(widget.event)));
+                        },
+                      ),
+                    );
+                  }
+                  return Container();
+                },
+              ),
+              Builder(
+                builder: (context) {
+                  if (widget.member['authority'] == 1) {
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                          right: 16.0, left: 16.0, bottom: 8.0),
+                      child: RaisedButton(
+                        color: Colors.red,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Icon(Icons.delete_forever),
+                            const SizedBox(width: 12.0),
+                            const Text('Deletar evento'),
+                          ],
+                        ),
+                        onPressed: () async {
+                          switch (await showDialog(
+                            context: context,
+                            builder: (context) {
+                              return SimpleDialog(
+                                children: <Widget>[
+                                  Center(
+                                      child: Text(
+                                          'Você tem certeza? (Não há volta)')),
+                                  ButtonTheme.bar(
+                                    child: ButtonBar(
+                                      children: <Widget>[
+                                        SimpleDialogOption(
+                                          onPressed: () {
+                                            Navigator.pop(context, 0);
+                                          },
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        SimpleDialogOption(
+                                          onPressed: () {
+                                            Navigator.pop(context, 1);
+                                          },
+                                          child: const Text('Deletar'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          )) {
+                            case 1:
+                              QuerySnapshot presences = await _db
+                                  .collection('presences')
+                                  .getDocuments();
+                              for (DocumentSnapshot pr in presences.documents) {
+                                if (pr['event'] == widget.event.reference) {
+                                  Firestore.instance
+                                      .runTransaction((transaction) async {
+                                    await transaction.delete(pr.reference);
+                                  });
+                                }
+                              }
+                              Firestore.instance.runTransaction(
+                                (transaction) async {
+                                  await transaction
+                                      .delete(widget.event.reference);
+                                },
+                              );
+
+                              Navigator.pop(context);
+                              break;
+                            default:
+                              break;
+                          }
+                        },
+                      ),
+                    );
+                  }
+                  return SizedBox(height: 8.0);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 class AttendanceWidget extends StatelessWidget {
@@ -319,17 +461,25 @@ class _AddEvent extends State<AddEvent> {
   bool _mandatory = false;
   final _nameController = TextEditingController();
   final _timesController = TextEditingController(text: '1');
+  final _descController = TextEditingController();
   CollectionReference get events => _db.collection('events');
   CollectionReference get members => _db.collection('members');
   CollectionReference get presences => _db.collection('presences');
 
-  Future<DocumentReference> _addEvent(DateTime from, DateTime to, String name,
-      bool haspresence, bool mandatory) async {
+  Future<DocumentReference> _addEvent(
+    DateTime from,
+    DateTime to,
+    String name,
+    String description,
+    bool haspresence,
+    bool mandatory,
+  ) async {
     final DocumentReference document = events.document();
     document.setData(<String, dynamic>{
       'from': from,
       'to': to,
       'name': name,
+      'description': description,
       'haspresence': haspresence,
       'mandatory': mandatory,
     });
@@ -362,6 +512,7 @@ class _AddEvent extends State<AddEvent> {
   void dispose() {
     _nameController.dispose();
     _timesController.dispose();
+    _descController.dispose();
     super.dispose();
   }
 
@@ -369,7 +520,7 @@ class _AddEvent extends State<AddEvent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Adicionar evento'),
+        title: const Text('Adicionar evento'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -450,6 +601,15 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           TextField(
+            keyboardType: TextInputType.multiline,
+            controller: _descController,
+            maxLines: 5,
+            decoration: InputDecoration(
+              labelText: 'Descrição do evento',
+            ),
+          ),
+          const SizedBox(height: 12.0),
+          TextField(
             controller: _timesController,
             keyboardType: TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
@@ -458,7 +618,7 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           SwitchListTile(
-            title: Text('Tem presença'),
+            title: const Text('Tem presença'),
             value: _haspresence,
             onChanged: (bool value) {
               setState(() {
@@ -468,7 +628,7 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           SwitchListTile(
-            title: Text('Obrigatório'),
+            title: const Text('Obrigatório'),
             value: _mandatory,
             onChanged: (bool value) {
               setState(() {
@@ -478,7 +638,7 @@ class _AddEvent extends State<AddEvent> {
           ),
           const SizedBox(height: 12.0),
           RaisedButton(
-            child: Text('Adicionar evento'),
+            child: const Text('Adicionar evento'),
             onPressed: () async {
               DateTime from = DateTime(_fromDate.year, _fromDate.month,
                   _fromDate.day, _fromTime.hour, _fromTime.minute);
@@ -495,6 +655,7 @@ class _AddEvent extends State<AddEvent> {
                     from,
                     to,
                     _nameController.text,
+                    _descController.text,
                     _haspresence,
                     _mandatory,
                   );
@@ -506,6 +667,7 @@ class _AddEvent extends State<AddEvent> {
                     DateTime(_fromDate.year, _fromDate.month, _fromDate.day, 23,
                         59, 59),
                     _nameController.text,
+                    _descController.text,
                     _haspresence,
                     _mandatory,
                   );
@@ -519,6 +681,7 @@ class _AddEvent extends State<AddEvent> {
                           DateTime(i, j, k, 0, 0),
                           DateTime(i, j, k, 23, 59, 59),
                           _nameController.text,
+                          _descController.text,
                           _haspresence,
                           _mandatory,
                         );
@@ -532,6 +695,7 @@ class _AddEvent extends State<AddEvent> {
                     DateTime(_toDate.year, _toDate.month, _toDate.day, 0, 0),
                     to,
                     _nameController.text,
+                    _descController.text,
                     _haspresence,
                     _mandatory,
                   );

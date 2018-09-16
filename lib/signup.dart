@@ -19,15 +19,35 @@ class _SignUpWidget extends State<SignUpWidget> {
   final _passController = TextEditingController();
   final _cpassController = TextEditingController();
   Future<bool> _sigin = Future.value(false);
+  CollectionReference get presences => _db.collection('presences');
   CollectionReference get members => _db.collection('members');
+  CollectionReference get events => _db.collection('events');
+
+  Future<Null> _addPresence(
+      DocumentReference event, DocumentReference member, bool went) async {
+    final DocumentReference document = presences.document();
+    document.setData(<String, dynamic>{
+      'event': event,
+      'member': member,
+      'went': went,
+    });
+  }
 
   Future<Null> _addMember(FirebaseUser user) async {
     final DocumentReference document = members.document(user.uid);
     document.setData(<String, dynamic>{
       'name': user.displayName,
-      'authority': 0,
+      'email': user.email,
+      'authority': -1,
       'projects': [],
     });
+
+    QuerySnapshot query = await events.getDocuments();
+    for (DocumentSnapshot event in query.documents) {
+      if (event['to'].isAfter(DateTime.now())) {
+        _addPresence(event.reference, document, false);
+      }
+    }
   }
 
   Widget loading(bool value) {
@@ -51,7 +71,7 @@ class _SignUpWidget extends State<SignUpWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Signup'),
+        title: const Text('Signup'),
       ),
       body: FutureBuilder(
         future: _sigin,
@@ -79,7 +99,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                       const SizedBox(height: 12.0),
                       TextFormField(
                         controller: _emailController,
-                        keyboardType: TextInputType.number,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           labelText: 'Email *',
                         ),
@@ -122,7 +142,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                   ),
                   const SizedBox(height: 16.0),
                   RaisedButton(
-                    child: Text('Confirmar'),
+                    child: const Text('Confirmar'),
                     onPressed: () async {
                       if (_formKey.currentState.validate() && !snapshot.data) {
                         setState(() {
@@ -138,6 +158,7 @@ class _SignUpWidget extends State<SignUpWidget> {
                           await _auth.updateProfile(_user);
 
                           FirebaseUser user = await _auth.currentUser();
+                          user.sendEmailVerification();
                           _addMember(user);
                           Navigator.of(context).pop(user);
                         } catch (e) {
@@ -145,14 +166,16 @@ class _SignUpWidget extends State<SignUpWidget> {
                               'The email address is already in use by another account.') {
                             Scaffold.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Esse email já está sendo usado'),
+                                content: const Text(
+                                    'Esse email já está sendo usado'),
                               ),
                             );
                           } else {
                             print(e.message);
                             Scaffold.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Deu ruim reporte esse erro'),
+                                content:
+                                    const Text('Deu ruim reporte esse erro'),
                               ),
                             );
                           }
