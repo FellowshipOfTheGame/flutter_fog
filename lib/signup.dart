@@ -38,6 +38,7 @@ class _SignUpWidget extends State<SignUpWidget> {
     document.setData(<String, dynamic>{
       'name': user.displayName,
       'email': user.email,
+      'photo': user.photoUrl,
       'authority': -1,
       'projects': [],
     });

@@ -342,13 +342,12 @@ class _ShowEventDetailsState extends State<ShowEventDetails> {
                                   .getDocuments();
                               for (DocumentSnapshot pr in presences.documents) {
                                 if (pr['event'] == widget.event.reference) {
-                                  Firestore.instance
-                                      .runTransaction((transaction) async {
+                                  _db.runTransaction((transaction) async {
                                     await transaction.delete(pr.reference);
                                   });
                                 }
                               }
-                              Firestore.instance.runTransaction(
+                              _db.runTransaction(
                                 (transaction) async {
                                   await transaction
                                       .delete(widget.event.reference);

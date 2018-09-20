@@ -84,12 +84,10 @@ class ShowMemberDetails extends StatelessWidget {
                               future: _auth.currentUser(),
                               builder: (context, usnapshot) {
                                 if (!usnapshot.hasData) return Container();
-                                FirebaseUser user = usnapshot.data;
-                                if (user.photoUrl != null) {
-                                  print(user.photoUrl);
+                                if (member['photo'] != null) {
                                   return CircleAvatar(
                                     radius: 32.0,
-                                    child: Image.network(user.photoUrl),
+                                    child: Image.network(member['photo']),
                                   );
                                 } else {
                                   return CircleAvatar(

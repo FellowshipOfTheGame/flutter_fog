@@ -171,6 +171,19 @@ class _MyHomePageState extends State<MyHomePage> {
     _auth.signOut();
   }
 
+  Future<Null> _updateInfo(FirebaseUser user) async {
+    DocumentSnapshot document =
+        await _db.collection('members').document(user.uid).get();
+    if (document['photo'] == null) {
+      _db.runTransaction(
+        (transaction) async {
+          await transaction
+              .update(document.reference, {'photo': user.photoUrl});
+        },
+      );
+    }
+  }
+
   Widget loading(bool value) {
     if (value) {
       return Center(child: CircularProgressIndicator());
@@ -199,6 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
     document.setData(<String, dynamic>{
       'name': user.displayName,
       'email': user.email,
+      'photo': user.photoUrl,
       'authority': -1,
       'projects': [],
     });
@@ -378,35 +392,36 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           );
-        // if (!snapshot.data.isEmailVerified) {
-        //   return Scaffold(
-        //     appBar: AppBar(
-        //       title: Text(widget.title),
-        //     ),
-        //     body: Column(
-        //       mainAxisAlignment: MainAxisAlignment.center,
-        //       crossAxisAlignment: CrossAxisAlignment.stretch,
-        //       children: <Widget>[
-        //         Text(
-        //           'Email não verificado',
-        //           textAlign: TextAlign.center,
-        //         ),
-        //         Padding(
-        //           padding: const EdgeInsets.all(8.0),
-        //           child: RaisedButton(
-        //             child: const Text('Sair'),
-        //             onPressed: () {
-        //               setState(() {
-        //                 _user = _handleSignOut();
-        //               });
-        //               Navigator.pop(context);
-        //             },
-        //           ),
-        //         ),
-        //       ],
-        //     ),
-        //   );
-        // }
+        _updateInfo(snapshot.data);
+        if (!snapshot.data.isEmailVerified) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(widget.title),
+            ),
+            body: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Email não verificado',
+                  textAlign: TextAlign.center,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: RaisedButton(
+                    child: const Text('Sair'),
+                    onPressed: () {
+                      setState(() {
+                        _user = _handleSignOut();
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         return FutureBuilder(
           future: getSnapshot(snapshot.data),
           builder: (ucontext, usnapshot) {
