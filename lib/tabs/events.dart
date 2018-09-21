@@ -62,30 +62,93 @@ Widget _eventCard(BuildContext context, DocumentSnapshot document) {
   );
 }
 
-Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
-  return Row(
-    key: Key(document.documentID),
-    children: <Widget>[
-      Expanded(
-        flex: 1,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              "${document['from'].day}/${document['from'].month}",
-              style: Theme.of(context).textTheme.subhead,
-            ),
-            Text(
-              weekdayByNumber(document['from'].weekday),
-              style: Theme.of(context).textTheme.body1,
-            ),
-          ],
-        ),
+class PrivilegeWidget extends StatefulWidget {
+  const PrivilegeWidget(this.event, {Key key}) : super(key: key);
+
+  final DocumentSnapshot event;
+
+  @override
+  _PrivilegeWidgetState createState() => _PrivilegeWidgetState();
+}
+
+class _PrivilegeWidgetState extends State<PrivilegeWidget> {
+  final _searchController = TextEditingController();
+
+  Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
+    return Card(
+      child: ListTile(
+        title: Text(document['name']),
+        onTap: () {
+          _db.runTransaction((transaction) async {
+            await transaction.update(
+                widget.event.reference, {'privilege': document.reference});
+          });
+          Navigator.of(context).pop();
+        },
       ),
-      Expanded(flex: 5, child: _eventCard(context, document))
-    ],
-  );
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Dar privilégios'),
+      ),
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Procurar nome',
+              ),
+              onChanged: (value) {
+                setState(() {});
+              },
+            ),
+          ),
+          StreamBuilder(
+            stream: _db.collection('members').orderBy('name').snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return LinearProgressIndicator();
+
+              List<DocumentSnapshot> _members = List<DocumentSnapshot>();
+              for (DocumentSnapshot member in snapshot.data.documents) {
+                bool inside = false;
+                for (String name in member['name'].split(' ')) {
+                  if (!inside &&
+                      name
+                          .toLowerCase()
+                          .startsWith(_searchController.text.toLowerCase())) {
+                    _members.add(member);
+                    inside = true;
+                  }
+                }
+              }
+
+              return Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(left: 8.0, right: 8.0),
+                  itemCount: _members.length,
+                  itemBuilder: (context, index) =>
+                      _buildListItem(context, _members[index]),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class ShowEventDetails extends StatefulWidget {
@@ -117,6 +180,30 @@ class _ShowEventDetailsState extends State<ShowEventDetails> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.event['name']),
+        actions: (widget.member['authority'] == 1)
+            ? <Widget>[
+                PopupMenuButton(
+                  itemBuilder: (BuildContext context) {
+                    List<PopupMenuItem> ret = [
+                      PopupMenuItem(
+                        child: FlatButton(
+                          child: const Text('Dar privilégio'),
+                          onPressed: () async {
+                            await Navigator.of(context).push(MaterialPageRoute(
+                                builder: (context) =>
+                                    PrivilegeWidget(widget.event)));
+                            Scaffold.of(context).showSnackBar(SnackBar(
+                                content: const Text('Privilégio adicionado')));
+                          },
+                        ),
+                      ),
+                    ];
+
+                    return ret;
+                  },
+                ),
+              ]
+            : null,
       ),
       body: FutureBuilder(
         future: _db
@@ -266,7 +353,8 @@ class _ShowEventDetailsState extends State<ShowEventDetails> {
               ),
               Builder(
                 builder: (context) {
-                  if (widget.member['authority'] == 1) {
+                  if (widget.member['authority'] == 1 ||
+                      widget.event['privilege'] == widget.member.reference) {
                     return Padding(
                       padding: const EdgeInsets.only(
                           right: 16.0, left: 16.0, bottom: 8.0),
@@ -296,7 +384,7 @@ class _ShowEventDetailsState extends State<ShowEventDetails> {
                       padding: const EdgeInsets.only(
                           right: 16.0, left: 16.0, bottom: 8.0),
                       child: RaisedButton(
-                        color: Colors.red,
+                        color: Colors.red[400],
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
@@ -354,7 +442,7 @@ class _ShowEventDetailsState extends State<ShowEventDetails> {
                                 },
                               );
 
-                              Navigator.pop(context);
+                              // Navigator.pop(context);
                               break;
                             default:
                               break;
@@ -379,6 +467,32 @@ class AttendanceWidget extends StatelessWidget {
     DocumentSnapshot document =
         await _db.collection("members").document(user.uid).get();
     return document;
+  }
+
+  Widget _buildListItem(BuildContext context, DocumentSnapshot document) {
+    return Row(
+      key: Key(document.documentID),
+      children: <Widget>[
+        Expanded(
+          flex: 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                "${document['from'].day}/${document['from'].month}",
+                style: Theme.of(context).textTheme.subhead,
+              ),
+              Text(
+                weekdayByNumber(document['from'].weekday),
+                style: Theme.of(context).textTheme.body1,
+              ),
+            ],
+          ),
+        ),
+        Expanded(flex: 5, child: _eventCard(context, document))
+      ],
+    );
   }
 
   @override
